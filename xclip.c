@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <ctype.h>
 #include <X11/Xlib.h>
@@ -44,8 +45,8 @@ Atom            sseln = XA_PRIMARY;		/* X selection to work with */
 
 /* Flags for command line options */
 static int      fverb = OSILENT;		/* output level */
-static int      fdiri = T;			/* direction is in */
-static int      ffilt = F;			/* filter mode */
+static int      fdiri = true;			/* direction is in */
+static int      ffilt = false;			/* filter mode */
 
 Display	       *dpy;				/* connection to X11 display */
 XrmDatabase     opt_db = NULL;			/* database for options */
@@ -107,9 +108,9 @@ static void doOptMain (int argc, char *argv[])
 	)
 	{
 		if (strcmp(rec_val.addr, "I") == 0)
-			fdiri = T;
+			fdiri = true;
 		if (strcmp(rec_val.addr, "O") == 0)
-			fdiri = F;
+			fdiri = false;
 	}
   
 	/* set filter mode */
@@ -125,7 +126,7 @@ static void doOptMain (int argc, char *argv[])
 	{
 		/* filter mode only allowed in silent mode */
 		if (fverb == OSILENT)
-			ffilt = T;
+			ffilt = true;
 	}
   
 	/* check for -help and -version */

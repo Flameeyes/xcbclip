@@ -26,10 +26,6 @@
 #define OQUIET   1
 #define OVERBOSE 2
 
-/* generic true/false constants for stuff */
-#define F 0     /* false... */
-#define T 1     /* true...  */
-
 /* true/false string constants */
 #define SF "F"	/* false */
 #define ST "T"	/* true  */
