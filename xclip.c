@@ -271,7 +271,7 @@ static void doIn(Window win, const char *progname)
 									   )) == NULL
 			   )
 			{
-			  errperror("%s: %s", progname, fil_names[fil_current]);
+			  perrorf("%s: %s", progname, fil_names[fil_current]);
 			  exit(EXIT_FAILURE);
 			} else
 			{

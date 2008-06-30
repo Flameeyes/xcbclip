@@ -102,7 +102,7 @@ void errxdisplay (char *display)
  * are an integer, and any number of strings. The integer needs to be set to
  * the number of strings that follow.
  */
-void errperror(char *format, ...)
+void perrorf(char *format, ...)
 {
 	/* start looping through the viariable arguments */
 	va_list ap;             /* argument pointer */
