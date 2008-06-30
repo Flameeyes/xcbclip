@@ -1,0 +1,23 @@
+This package was debianized by Kim Saunders <kims@debian.org> on
+Thu, 20 Sep 2001 16:29:47 +1000.
+
+It was downloaded from http://people.debian.org/~kims/xclip/
+
+Upstream Author:
+
+Kim Saunders <kims@debian.org>
+
+Copyright:
+
+Copyright (C) 2001 Kim Saunders
+
+xclip is released under the terms of the GNU GPL, the full text of which can
+be found in /usr/share/common-licenses on Debian GNU/Linux systems.
+
+=======================
+
+Since Kim Saunders is the upstream author and was the Debian maintainer and was
+missing, I'm doing upstream type fixes in my own repository which can be seen
+at: http://svn.ev-en.org/viewsvn.php?project=xclip
+
+  -- Baruch Even

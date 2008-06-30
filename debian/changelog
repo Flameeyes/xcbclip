@@ -1,0 +1,113 @@
+xclip (0.08-7) unstable; urgency=low
+
+  * Correct typos in the manpage (Closes: #394538)
+  * Close stdout in filter mode (Closes: #395546)
+  * Link only to directly needed libraries (fixes checklib "problem") 
+
+ -- Baruch Even <baruch@debian.org>  Thu,  2 Nov 2006 09:19:04 +0200
+
+xclip (0.08-6) unstable; urgency=low
+
+  * Acknowledge NMU by Jonathan Walther
+  * Set manpage section to be 1x, clears a lintian warning.
+  * Update Standards-Version to 3.7.2, nothing to do.
+  * Switch to debhelper level 5.
+
+ -- Baruch Even <baruch@debian.org>  Thu, 13 Jul 2006 22:33:40 +0100
+
+xclip (0.08-5.1) unstable; urgency=low
+
+  * Recompile for compatibility with latest X server binaries
+
+ -- Jonathan Walther <krooger@debian.org>  Mon, 17 Apr 2006 18:18:56 -0800
+
+xclip (0.08-5) unstable; urgency=low
+
+  * Acknowledge NMU by Steve Langasek (Closes: #346804)
+  * Expand -h text for -in and -out (Closes: #347987)
+  * Move to dh compat level 4
+  * Update to standards version 3.6.2, no changes needed.
+
+ -- Baruch Even <baruch@debian.org>  Sun, 22 Jan 2006 19:16:40 +0000
+
+xclip (0.08-4.1) unstable; urgency=high
+
+  * Non-maintainer upload.
+  * High-urgency upload for RC bugfix.
+  * Build-depend on libx11-dev, libxmu-dev, x-dev instead of on the obsolete
+    xlibs-dev (closes: #346804).
+
+ -- Steve Langasek <vorlon@debian.org>  Mon,  9 Jan 2006 03:36:15 -0800
+
+xclip (0.08-4) unstable; urgency=low
+
+  * Change directory when waiting for X11 events, this allows the user to
+    umount the directory xclip was started from. (closes: bug#267412)
+
+ -- Baruch Even <baruch@debian.org>  Fri, 27 Aug 2004 12:57:13 +0100
+
+xclip (0.08-3) unstable; urgency=low
+
+  * Fix crash when trying to: xclip --help
+  * Add support for cut buffers (closes: bug#227954)
+
+ -- Baruch Even <baruch@debian.org>  Sat, 19 Jun 2004 12:05:10 +0300
+
+xclip (0.08-2) unstable; urgency=low
+
+  * Taking over maintainership (closes: bug#254392)
+  * Add Homepage link to description
+  * Updated to latest policy version (3.6.1), no changes needed.
+  * Fix a corruption bug when transferring large buffers (larger than 4096
+    bytes).
+  * Solve KDE integration with xclip (closes: bug#172812)
+
+ -- Baruch Even <baruch@debian.org>  Sat, 19 Jun 2004 07:58:19 +0300
+
+xclip (0.08-1.1) unstable; urgency=low
+
+  * NMU
+  * debian/control (Maintainer): change address from
+    kim.saunders@mercuryit.com.au to kims@debian.org since the
+    former bounces.
+
+ -- Martin Michlmayr <tbm@cyrius.com>  Sun, 15 Feb 2004 15:07:11 +0000
+
+xclip (0.08-1) unstable; urgency=low
+
+  * New upstream release (closes: bug#98769)
+  * Updated package description (closes: bug#93458)
+  * First upload into debian archive by Kim Saunders (upstream author & new
+    package maintainer)
+
+ -- Kim Saunders <kims@debian.org>  Mon, 17 Dec 2001 17:42:42 +1100
+
+xclip (0.07-2) unstable; urgency=low
+
+  * Changelog includes history from when shaleh was maintaining it
+  * debian/copyright mentions  GPL can be found in /usr/share/common-licenses
+
+ -- Kim Saunders <kim.saunders@mercuryit.com.au>  Fri, 26 Oct 2001 09:18:52 +1000
+
+xclip (0.07-1) unstable; urgency=low
+
+  * Updated package, new upstream release
+
+ -- Kim Saunders <kim.saunders@mercuryit.com.au>  Fri, 26 Oct 2001 09:12:09 +1000
+
+xclip (0.06-1) unstable; urgency=low
+
+  * Package is now maintained by Kim Saunders <kim.saunders@mercuryit.com.au>
+  * New upstream release.
+
+ -- Kim Saunders <kim.saunders@mercuryit.com.au>  Thu, 20 Sep 2001 16:29:47 +1000
+
+xclip (0.03-1) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Sean 'Shaleh' Perry <shaleh@debian.org>  Wed,  4 Apr 2001 14:31:06 -0700
+
+Local variables:
+mode: debian-changelog
+End:
