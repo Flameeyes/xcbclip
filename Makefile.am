@@ -15,4 +15,5 @@ xcbclip_SOURCES = \
 	xclip.c \
 	xcprint.c \
 	xcprint.h
+xcbclip_CFLAGS = $(VISIBILITY_FLAG)
 xcbclip_LDADD = -lX11 -lXmu
