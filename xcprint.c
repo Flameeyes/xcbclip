@@ -55,7 +55,7 @@ void prhelp (char *name)
 		"      -quiet       run in foreground, show what's happening\n"\
 		"      -verbose     running commentary\n"\
 		"\n"\
-		"Report bugs to <kims@debian.org>\n",
+		"Report bugs to <flameeyes@gmail.com>\n",
 		name
 	);
 	exit(EXIT_SUCCESS);
