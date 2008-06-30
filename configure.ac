@@ -13,6 +13,7 @@ fi
 
 PKG_CHECK_MODULES([XCB], [xcb])
 
+AC_CONFIG_HEADER([config.h])
 AC_CONFIG_FILES([Makefile])
 
 AC_OUTPUT

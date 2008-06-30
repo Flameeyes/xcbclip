@@ -18,6 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <config.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -65,7 +67,7 @@ static void doOptMain (int argc, char *argv[])
 		&opt_db,
 		opt_tab,
 		sizeof(opt_tab) / sizeof(opt_tab[0]),
-		XC_NAME,
+		PACKAGE_NAME,
 		&argc,
 		argv
 	);
@@ -74,8 +76,8 @@ static void doOptMain (int argc, char *argv[])
 	if (
 		XrmGetResource(
 			opt_db,
-			"xclip.olevel",
-			"Xclip.Olevel",
+			PACKAGE_NAME ".olevel",
+			PACKAGE_NAME ".Olevel",
 			&rec_typ,
 			&rec_val
 		)
@@ -94,8 +96,8 @@ static void doOptMain (int argc, char *argv[])
 	if (
 		XrmGetResource(
 			opt_db,
-			"xclip.direction",
-			"Xclip.Direction",
+			PACKAGE_NAME ".direction",
+			PACKAGE_NAME ".Direction",
 			&rec_typ,
 			&rec_val
 		)
@@ -111,8 +113,8 @@ static void doOptMain (int argc, char *argv[])
 	if (
 		XrmGetResource(
 			opt_db,
-			"xclip.filter",
-			"Xclip.Filter",
+			PACKAGE_NAME ".filter",
+			PACKAGE_NAME ".Filter",
 			&rec_typ,
 			&rec_val
 		)
@@ -127,8 +129,8 @@ static void doOptMain (int argc, char *argv[])
 	if (
 		XrmGetResource(
 			opt_db,
-			"xclip.print",
-			"Xclip.Print",
+			PACKAGE_NAME ".print",
+			PACKAGE_NAME ".Print",
 			&rec_typ,
 			&rec_val
 		)
@@ -144,8 +146,8 @@ static void doOptMain (int argc, char *argv[])
 	if (
 		XrmGetResource(
 			opt_db,
-			"xclip.display",
-			"Xclip.Display",
+			PACKAGE_NAME ".display",
+			PACKAGE_NAME ".Display",
 			&rec_typ,
 			&rec_val
 		)
@@ -160,8 +162,8 @@ static void doOptMain (int argc, char *argv[])
 	if (
 		XrmGetResource(
 			opt_db,
-			"xclip.loops",
-			"Xclip.Loops",
+			PACKAGE_NAME ".loops",
+			PACKAGE_NAME ".Loops",
 			&rec_typ,
 			&rec_val
 		)
@@ -197,8 +199,8 @@ static void doOptSel (void)
 	if (
 		XrmGetResource(
 			opt_db,
-			"xclip.selection",
-			"Xclip.Selection",
+			PACKAGE_NAME ".selection",
+			PACKAGE_NAME ".Selection",
 			&rec_typ,
 			&rec_val
 		)

@@ -18,6 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <config.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -60,10 +62,11 @@ void prhelp (char *name)
 /* A function to print the software version info */
 void prversion (void)
 {
-	fprintf(stderr, "%s version %1.2f\n", XC_NAME, XC_VERS);
-	fprintf(stderr, "Copyright (C) 2001 Kim Saunders\n");
-	fprintf(stderr, "Distributed under the terms of the GNU GPL\n");
-	exit(EXIT_SUCCESS);
+  fprintf(stdout,
+	  PACKAGE_STRING "\n"
+	  "Copyright (c) 2001 Kim Saunders; 2008 Diego 'Flameeyes' Pettenò" "\n"
+	  "Distributed under the terms of the GNU GPL" "\n");
+  exit(EXIT_SUCCESS);
 }
 
 /* failure message for malloc() problems */
