@@ -271,13 +271,8 @@ static void doIn(Window win, const char *progname)
 									   )) == NULL
 			   )
 			{
-				errperror(
-						3,
-						progname,
-						": ",
-						fil_names[fil_current]
-						);
-				exit(EXIT_FAILURE);
+			  errperror("%s: %s", progname, fil_names[fil_current]);
+			  exit(EXIT_FAILURE);
 			} else
 			{
 				/* file opened successfully. Print

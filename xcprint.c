@@ -102,40 +102,18 @@ void errxdisplay (char *display)
  * are an integer, and any number of strings. The integer needs to be set to
  * the number of strings that follow.
  */
-void errperror(int prf_tot, ...)
+void errperror(char *format, ...)
 {
-	va_list ap;		/* argument pointer */
-	char *msg_all;		/* all messages so far */
-	char *msg_cur;		/* current message string */
-	int prf_cur;		/* current prefix number */
-	
-	/* start off with an empty string */
-	msg_all = strdup("");
-
 	/* start looping through the viariable arguments */
-	va_start(ap, prf_tot);
+	va_list ap;             /* argument pointer */
+	va_start(ap, format);
 
-	/* loop through each of the arguments */
-	for (prf_cur = 0; prf_cur < prf_tot; prf_cur++)
-	{
-		/* get the current argument */
-		msg_cur = va_arg(ap, char *);
-		
-		/* realloc msg_all so it's big enough for itself, the current
-		 * argument, and a null terminator
-		 */
-		msg_all = (char *)xcrealloc(
-			msg_all,
-			strlen(msg_all) + strlen(msg_cur) + sizeof(char)
-		);
-
-		/* append the current message the the total message */
-		strcat(msg_all, msg_cur);
-	}
+	char *prefix = NULL;
+	asprintf(&prefix, format, ap);
 	va_end(ap);
 
-	perror(msg_all);
+	perror(prefix);
 
 	/* free the complete string */
-	free(msg_all);
+	free(prefix);
 }

@@ -26,4 +26,4 @@ extern void prhelp(char *);
 extern void prversion(void);
 extern void errmalloc(void);
 extern void errxdisplay(char *);
-extern void errperror(int, ...);
+void errperror(char *format, ...);
