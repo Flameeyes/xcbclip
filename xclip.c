@@ -503,70 +503,70 @@ int main (int argc, char *argv[])
 	 */
 	
 	/* loop option entry */
-	opt_tab[0].option 	=	xcstrdup("-loops");
-	opt_tab[0].specifier	=	xcstrdup(".loops");
+	opt_tab[0].option 	=	strdup("-loops");
+	opt_tab[0].specifier	=	strdup(".loops");
 	opt_tab[0].argKind	=	XrmoptionSepArg;
 	opt_tab[0].value	=	(XPointer) NULL;
 
 	/* display option entry */
-	opt_tab[1].option	=	xcstrdup("-display");
-	opt_tab[1].specifier	=	xcstrdup(".display");
+	opt_tab[1].option	=	strdup("-display");
+	opt_tab[1].specifier	=	strdup(".display");
 	opt_tab[1].argKind	=	XrmoptionSepArg;
 	opt_tab[1].value	=	(XPointer) NULL;
 				
 	/* selection option entry */
-	opt_tab[2].option 	=	xcstrdup("-selection");
-	opt_tab[2].specifier	=	xcstrdup(".selection");
+	opt_tab[2].option 	=	strdup("-selection");
+	opt_tab[2].specifier	=	strdup(".selection");
 	opt_tab[2].argKind	=	XrmoptionSepArg;
 	opt_tab[2].value	=	(XPointer) NULL;
 		
 	/* filter option entry */
-	opt_tab[3].option	=	xcstrdup("-filter");
-	opt_tab[3].specifier	=	xcstrdup(".filter");
+	opt_tab[3].option	=	strdup("-filter");
+	opt_tab[3].specifier	=	strdup(".filter");
 	opt_tab[3].argKind	=	XrmoptionNoArg;	
-	opt_tab[3].value	=	(XPointer) xcstrdup(ST);
+	opt_tab[3].value	=	(XPointer) strdup(ST);
 		
 	/* in option entry */
-	opt_tab[4].option	=	xcstrdup("-in");
-	opt_tab[4].specifier	=	xcstrdup(".direction");
+	opt_tab[4].option	=	strdup("-in");
+	opt_tab[4].specifier	=	strdup(".direction");
 	opt_tab[4].argKind	=	XrmoptionNoArg;
-	opt_tab[4].value	=	(XPointer) xcstrdup("I");
+	opt_tab[4].value	=	(XPointer) strdup("I");
 		
 	/* out option entry */
-	opt_tab[5].option	=	xcstrdup("-out");
-	opt_tab[5].specifier	=	xcstrdup(".direction");
+	opt_tab[5].option	=	strdup("-out");
+	opt_tab[5].specifier	=	strdup(".direction");
 	opt_tab[5].argKind	=	XrmoptionNoArg;
-	opt_tab[5].value	=	(XPointer) xcstrdup("O");
+	opt_tab[5].value	=	(XPointer) strdup("O");
 		
 	/* version option entry */
-	opt_tab[6].option	=	xcstrdup("-version");
-	opt_tab[6].specifier	=	xcstrdup(".print");
+	opt_tab[6].option	=	strdup("-version");
+	opt_tab[6].specifier	=	strdup(".print");
 	opt_tab[6].argKind	=	XrmoptionNoArg;
-	opt_tab[6].value	=	(XPointer) xcstrdup("V");
+	opt_tab[6].value	=	(XPointer) strdup("V");
 		
 	/* help option entry */
-	opt_tab[7].option	=	xcstrdup("-help");
-	opt_tab[7].specifier	=	xcstrdup(".print");
+	opt_tab[7].option	=	strdup("-help");
+	opt_tab[7].specifier	=	strdup(".print");
 	opt_tab[7].argKind	=	XrmoptionNoArg;
-	opt_tab[7].value	=	(XPointer) xcstrdup("H");
+	opt_tab[7].value	=	(XPointer) strdup("H");
 		
 	/* silent option entry */
-	opt_tab[8].option	=	xcstrdup("-silent");
-	opt_tab[8].specifier	=	xcstrdup(".olevel");
+	opt_tab[8].option	=	strdup("-silent");
+	opt_tab[8].specifier	=	strdup(".olevel");
 	opt_tab[8].argKind	=	XrmoptionNoArg;
-	opt_tab[8].value	=	(XPointer) xcstrdup("S");
+	opt_tab[8].value	=	(XPointer) strdup("S");
 		
 	/* quiet option entry */
-	opt_tab[9].option	=	xcstrdup("-quiet");
-	opt_tab[9].specifier	=	xcstrdup(".olevel");
+	opt_tab[9].option	=	strdup("-quiet");
+	opt_tab[9].specifier	=	strdup(".olevel");
 	opt_tab[9].argKind	=	XrmoptionNoArg;
-	opt_tab[9].value	=	(XPointer) xcstrdup("Q");
+	opt_tab[9].value	=	(XPointer) strdup("Q");
 		
 	/* verbose option entry */
-	opt_tab[10].option	=	xcstrdup("-verbose");
-	opt_tab[10].specifier	=	xcstrdup(".olevel");
+	opt_tab[10].option	=	strdup("-verbose");
+	opt_tab[10].specifier	=	strdup(".olevel");
 	opt_tab[10].argKind	=	XrmoptionNoArg;
-	opt_tab[10].value	=	(XPointer) xcstrdup("V");
+	opt_tab[10].value	=	(XPointer) strdup("V");
 
 	/* parse command line options */
 	doOptMain(argc, argv);

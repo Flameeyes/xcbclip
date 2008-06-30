@@ -56,20 +56,6 @@ void *xcrealloc (void *ptr, size_t size)
 	return(mem);
 }
 
-/* a strdup() implementation since ANSI C doesn't include strdup() */
-void *xcstrdup (const char *string)
-{
-	void *mem;
-
-	/* allocate a buffer big enough to hold the characters and the
-	 * null terminator, then copy the string into the buffer
-	 */
-	mem = xcmalloc(strlen(string) + sizeof(char));
-	strcpy(mem, string);
-
-	return(mem);
-}
-
 /* Retrieves the contents of a selections. Arguments are:
  *
  * A display that has been opened.

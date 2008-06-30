@@ -98,7 +98,7 @@ void errperror(int prf_tot, ...)
 	int prf_cur;		/* current prefix number */
 	
 	/* start off with an empty string */
-	msg_all = xcstrdup("");
+	msg_all = strdup("");
 
 	/* start looping through the viariable arguments */
 	va_start(ap, prf_tot);
