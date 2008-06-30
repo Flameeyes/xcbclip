@@ -26,4 +26,9 @@ extern void prhelp(char *);
 extern void prversion(void);
 extern void errmalloc(void);
 extern void errxdisplay(char *);
-void errperror(char *format, ...);
+
+void errperror(char *format, ...)
+#ifdef SUPPORT_ATTRIBUTE_FORMAT
+  __attribute__((format(printf(1, 2))))
+#endif
+  ;

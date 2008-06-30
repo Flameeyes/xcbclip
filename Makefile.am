@@ -1,6 +1,8 @@
+ACLOCAL_AMFLAGS = -I m4
+
 dist_doc_DATA = CHANGES COPYING README
 
-EXTRA_DIST = xclip.man
+EXTRA_DIST = xclip.man m4
 
 TESTS = xctest
 
