@@ -27,7 +27,7 @@ delay=1 # seconds to wait before running xclip -o
 if [ ! -f xclip ];
 then
 	echo "Error: xclip doesn't exist in the current directory."
-	exit
+	exit 1
 fi
 
 checker=""
