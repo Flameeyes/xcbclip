@@ -35,8 +35,6 @@
 #include "xcprint.h"
 #include "xclib.h"
 
-/* command line option table for XrmParseCommand() */
-XrmOptionDescRec opt_tab[11];
 
 /* Options that get set on the command line */
 int             sloop = 0;			/* number of loops */
@@ -65,6 +63,98 @@ int		tempi = 0;
 /* Use XrmParseCommand to parse command line options to option variable */
 static void doOptMain (int argc, char *argv[])
 {
+  /* command line option table for XrmParseCommand() */
+  XrmOptionDescRec opt_tab[] = {
+    /* loop option entry */
+    {
+      .option 	=	strdup("-loops"),
+      .specifier=	strdup(".loops"),
+      .argKind	=	XrmoptionSepArg,
+      .value	=	(XPointer) NULL
+    },
+
+    /* display option entry */
+    {
+      .option	=	strdup("-display"),
+      .specifier=	strdup(".display"),
+      .argKind	=	XrmoptionSepArg,
+      .value	=	(XPointer) NULL
+    },
+	
+    /* selection option entry */
+    {
+      .option 	=	strdup("-selection"),
+      .specifier=	strdup(".selection"),
+      .argKind	=	XrmoptionSepArg,
+      .value	=	(XPointer) NULL
+    },
+		
+    /* filter option entry */
+    {
+      .option	=	strdup("-filter"),
+      .specifier=	strdup(".filter"),
+      .argKind	=	XrmoptionNoArg,
+      .value	=	(XPointer) strdup(ST)
+    },
+		
+    /* in option entry */
+    {
+      .option	=	strdup("-in"),
+      .specifier=	strdup(".direction"),
+      .argKind	=	XrmoptionNoArg,
+      .value	=	(XPointer) strdup("I")
+    },
+		
+    /* out option entry */
+    {
+      .option	=	strdup("-out"),
+      .specifier=	strdup(".direction"),
+      .argKind	=	XrmoptionNoArg,
+      .value	=	(XPointer) strdup("O")
+    },
+		
+    /* version option entry */
+    {
+      .option	=	strdup("-version"),
+      .specifier=	strdup(".print"),
+      .argKind	=	XrmoptionNoArg,
+      .value	=	(XPointer) strdup("V")
+    },
+		
+    /* help option entry */
+    {
+      .option	=	strdup("-help"),
+      .specifier=	strdup(".print"),
+      .argKind	=	XrmoptionNoArg,
+      .value	=	(XPointer) strdup("H")
+    },
+		
+    /* silent option entry */
+    {
+      .option	=	strdup("-silent"),
+      .specifier=	strdup(".olevel"),
+      .argKind	=	XrmoptionNoArg,
+      .value	=	(XPointer) strdup("S")
+    },
+		
+    /* quiet option entry */
+    {
+      .option	=	strdup("-quiet"),
+      .specifier=	strdup(".olevel"),
+      .argKind	=	XrmoptionNoArg,
+      .value	=	(XPointer) strdup("Q")
+    },
+		
+    /* verbose option entry */
+    {
+      .option	=	strdup("-verbose"),
+      .specifier=	strdup(".olevel"),
+      .argKind	=	XrmoptionNoArg,
+      .value	=	(XPointer) strdup("V")
+    }
+
+  };
+
 	/* Initialise resource manager and parse options into database */
 	XrmInitialize();
 	XrmParseCommand(
@@ -494,80 +584,6 @@ int main (int argc, char *argv[])
 {
 	/* Declare variables */
 	Window win;			/* Window */
-
-	/* set up option table. I can't figure out a better way than this to
-	 * do it while sticking to pure ANSI C. The option and specifier
-	 * members have a type of volatile char *, so they need to be allocated
-	 * by strdup or malloc, you can't set them to a string constant at
-	 * declare time, this is note pure ANSI C apparently, although it does
-	 * work with gcc
-	 */
-	
-	/* loop option entry */
-	opt_tab[0].option 	=	strdup("-loops");
-	opt_tab[0].specifier	=	strdup(".loops");
-	opt_tab[0].argKind	=	XrmoptionSepArg;
-	opt_tab[0].value	=	(XPointer) NULL;
-
-	/* display option entry */
-	opt_tab[1].option	=	strdup("-display");
-	opt_tab[1].specifier	=	strdup(".display");
-	opt_tab[1].argKind	=	XrmoptionSepArg;
-	opt_tab[1].value	=	(XPointer) NULL;
-				
-	/* selection option entry */
-	opt_tab[2].option 	=	strdup("-selection");
-	opt_tab[2].specifier	=	strdup(".selection");
-	opt_tab[2].argKind	=	XrmoptionSepArg;
-	opt_tab[2].value	=	(XPointer) NULL;
-		
-	/* filter option entry */
-	opt_tab[3].option	=	strdup("-filter");
-	opt_tab[3].specifier	=	strdup(".filter");
-	opt_tab[3].argKind	=	XrmoptionNoArg;	
-	opt_tab[3].value	=	(XPointer) strdup(ST);
-		
-	/* in option entry */
-	opt_tab[4].option	=	strdup("-in");
-	opt_tab[4].specifier	=	strdup(".direction");
-	opt_tab[4].argKind	=	XrmoptionNoArg;
-	opt_tab[4].value	=	(XPointer) strdup("I");
-		
-	/* out option entry */
-	opt_tab[5].option	=	strdup("-out");
-	opt_tab[5].specifier	=	strdup(".direction");
-	opt_tab[5].argKind	=	XrmoptionNoArg;
-	opt_tab[5].value	=	(XPointer) strdup("O");
-		
-	/* version option entry */
-	opt_tab[6].option	=	strdup("-version");
-	opt_tab[6].specifier	=	strdup(".print");
-	opt_tab[6].argKind	=	XrmoptionNoArg;
-	opt_tab[6].value	=	(XPointer) strdup("V");
-		
-	/* help option entry */
-	opt_tab[7].option	=	strdup("-help");
-	opt_tab[7].specifier	=	strdup(".print");
-	opt_tab[7].argKind	=	XrmoptionNoArg;
-	opt_tab[7].value	=	(XPointer) strdup("H");
-		
-	/* silent option entry */
-	opt_tab[8].option	=	strdup("-silent");
-	opt_tab[8].specifier	=	strdup(".olevel");
-	opt_tab[8].argKind	=	XrmoptionNoArg;
-	opt_tab[8].value	=	(XPointer) strdup("S");
-		
-	/* quiet option entry */
-	opt_tab[9].option	=	strdup("-quiet");
-	opt_tab[9].specifier	=	strdup(".olevel");
-	opt_tab[9].argKind	=	XrmoptionNoArg;
-	opt_tab[9].value	=	(XPointer) strdup("Q");
-		
-	/* verbose option entry */
-	opt_tab[10].option	=	strdup("-verbose");
-	opt_tab[10].specifier	=	strdup(".olevel");
-	opt_tab[10].argKind	=	XrmoptionNoArg;
-	opt_tab[10].value	=	(XPointer) strdup("V");
 
 	/* parse command line options */
 	doOptMain(argc, argv);
