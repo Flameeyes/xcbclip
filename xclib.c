@@ -31,7 +31,7 @@
 #include "xclib.h"
 
 /* check a pointer to allocater memory, print an error if it's null */
-void xcmemcheck(void *ptr)
+static void xcmemcheck(void *ptr)
 {
 	if (ptr == NULL)
 		errmalloc();
