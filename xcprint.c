@@ -66,9 +66,15 @@ void prhelp (char *name)
 void prversion (void)
 {
   fprintf(stdout,
-	  PACKAGE_STRING "\n"
-	  "Copyright (c) 2001 Kim Saunders; 2008 Diego 'Flameeyes' Pettenò" "\n"
-	  "Distributed under the terms of the GNU GPL" "\n");
+	  PACKAGE_STRING " - command line interface to X selections" "\n"
+	  "Copyright (c) 2001 Kim Saunders" "\n"
+	  "Copyright (c) 2008 Diego 'Flameeyes' Pettenò" "\n"
+	  "\n"
+	  "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>" "\n"
+	  "This is free software: you are free to change and redistribute it." "\n"
+	  "There is NO WARRANTY, to the extent permitted by law." "\n"
+	  );
+
   exit(EXIT_SUCCESS);
 }
 
