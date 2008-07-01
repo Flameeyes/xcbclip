@@ -13,6 +13,8 @@ xcbclip_SOURCES = \
 	xclib.c \
 	xclib.h \
 	xclip.c \
+	xcb-contrib.c \
+	xcb-contrib.h \
 	xcprint.c \
 	xcprint.h
 xcbclip_CFLAGS = $(VISIBILITY_FLAG) $(XCB_CFLAGS)
