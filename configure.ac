@@ -18,7 +18,7 @@ CC_ATTRIBUTE_FORMAT
 CC_FLAG_VISIBILITY([VISIBILITY_FLAG="-fvisibility=hidden"])
 AC_SUBST([VISIBILITY_FLAG])
 
-PKG_CHECK_MODULES([XCB], [xcb xcb-atom])
+PKG_CHECK_MODULES([XCB], [xcb xcb-atom xcb-property])
 
 AC_CONFIG_HEADER([config.h])
 AC_CONFIG_FILES([Makefile])
