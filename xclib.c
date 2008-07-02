@@ -23,9 +23,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
-#include <X11/Xlib.h>
-#include <X11/Xatom.h>
+#include <assert.h>
+#include <xcb/xcb.h>
+#include <xcb/xcb_atom.h>
+#include <xcb/xcb_property.h>
 #include "xcdef.h"
 #include "xcprint.h"
 #include "xclib.h"
@@ -59,6 +62,32 @@ void *xcrealloc (void *ptr, size_t size)
 	return(mem);
 }
 
+static xcb_atom_t incr_atom;
+static xcb_atom_t targets_atom;
+static xcb_atom_t xclip_out_atom;
+
+static void find_internal_atoms(xcb_connection_t* xconn) {
+  static bool executed = false;
+  if ( executed ) return;
+
+  {
+    const intern_atom_fast_cookie_t cookie = intern_atom_fast(xconn, false, sizeof("INCR") -1, "INCR");
+    incr_atom = intern_atom_fast_reply(xconn, cookie, 0);
+  }
+
+  {
+    const intern_atom_fast_cookie_t cookie = intern_atom_fast(xconn, false, sizeof("XCLIP_OUT") -1, "XCLIP_OUT");
+    xclip_out_atom = intern_atom_fast_reply(xconn, cookie, 0);
+  }
+
+  {
+    const intern_atom_fast_cookie_t cookie = intern_atom_fast(xconn, false, sizeof("TARGETS") -1, "TARGETS");
+    targets_atom = intern_atom_fast_reply(xconn, cookie, 0);
+  }
+
+  executed = true;
+}
+
 /* Retrieves the contents of a selections. Arguments are:
  *
  * A display that has been opened.
@@ -78,233 +107,151 @@ void *xcrealloc (void *ptr, size_t size)
  * Return value is 1 if the retrieval of the selection data is complete,
  * otherwise it's 0.
  */
-int xcout (
-	Display *dpy,
-	Window win,
-	XEvent evt,
-	Atom sel,
-	unsigned char **txt,
-	unsigned long *len,
-	unsigned int *context
+int xcout(
+	xcb_connection_t* xconn,
+	xcb_window_t win,
+	xcb_generic_event_t* evt,
+	xcb_atom_t sel,
+	uint8_t** txt,
+	size_t* len,
+	uint32_t* context
 )
 {
-	/* a property for other windows to put their selection into */
-	Atom pty, inc, pty_type, targets;
-	int pty_format;
+  find_internal_atoms(xconn);
+
+  /* local buffer of text to return */
+  uint8_t *ltxt = *txt;
+
+  xcb_void_cookie_t cookie;
+  switch (*context) {
+    /* there is no context, do an XConvertSelection() */
+  case XCLIB_XCOUT_NONE:
+    /* initialise return length to 0 */
+    if (*len > 0) {
+      free(*txt);
+      *len = 0;
+    }
+
+    /* send a selection request */
+    cookie = xcb_convert_selection_checked(xconn, win, sel, STRING,
+					   xclip_out_atom, XCB_CURRENT_TIME);
+
+    xcb_perror(xconn, cookie, "cannot convert selection");
+
+    *context = XCLIB_XCOUT_SENTCONVSEL;
+    return 0;
 		
-	/* buffer for XGetWindowProperty to dump data into */
-	unsigned char *buffer;
-	unsigned long pty_size, pty_items;
+  case XCLIB_XCOUT_SENTCONVSEL: {
+    if ((evt->response_type & ~0x80) != XCB_SELECTION_NOTIFY)
+      return 0;
 
-	/* local buffer of text to return */
-	unsigned char *ltxt = *txt;
+    xcb_get_property_cookie_t cookie = xcb_get_property(xconn, false, win,
+							xclip_out_atom, STRING, 0, 128);
+    xcb_get_property_reply_t *reply = xcb_get_property_reply(xconn, cookie, 0);
 
-	pty = XInternAtom(dpy, "XCLIP_OUT", False);
-	targets = XInternAtom(dpy, "TARGETS", False);
+    assert(reply != NULL);
 
-	switch (*context)
-	{
-		/* there is no context, do an XConvertSelection() */
-		case XCLIB_XCOUT_NONE:
-			/* initialise return length to 0 */
-			if (*len > 0)
-			{
-				free(*txt);
-				*len = 0;
-			}
+    if ( reply->type == incr_atom ) {
+      xcb_delete_property(xconn, win, xclip_out_atom);
+      xcb_flush(xconn);
+      *context = XCLIB_XCOUT_INCR;
+      return 0;
+    }
+    
+    assert(reply->format == 8);
+    
+    uint32_t reply_len = xcb_get_property_value_length(reply) * (reply->format / 8);
+    if(reply->bytes_after) {
+      cookie = xcb_get_property(xconn, 0, win, xclip_out_atom, reply->type, 0, reply_len);
+      free(reply);
+      reply = xcb_get_property_reply(xconn, cookie, 0);
+      assert(reply != NULL);
+    }
+    *txt = calloc(reply_len, 1);
+    assert(*txt != NULL);
 
-			/* send a selection request */
-			XConvertSelection(
-				dpy,
-				sel,
-				XA_STRING,
-				pty,
-				win,
-				CurrentTime
-			);
-			*context = XCLIB_XCOUT_SENTCONVSEL;
-			return(0);
-		
-		case XCLIB_XCOUT_SENTCONVSEL:
-			inc = XInternAtom(dpy, "INCR", False);
+    memcpy(*txt, xcb_get_property_value(reply), reply_len);
+    *len = reply_len;
+    
+    /* finished with property, delete it */
+    free(reply);
+    xcb_delete_property_checked(xconn, win, xclip_out_atom);
+    
+    *context = XCLIB_XCOUT_NONE;
 
-			if (evt.type != SelectionNotify)
-				return(0);
+    /* complete contents of selection fetched, return 1 */
+    return 1;
+  }
 
-			/* find the size and format of the data in property */
-			XGetWindowProperty(
-				dpy,
-				win,
-				pty,
-				0,
-				0,
-				False,
-				AnyPropertyType,
-				&pty_type,
-				&pty_format,
-				&pty_items,
-				&pty_size,
-				&buffer
-			);
-			XFree(buffer);
-
-			if (pty_type == inc)
-			{
-				/* start INCR mechanism by deleting property */
-				XDeleteProperty(dpy, win, pty);
-				XFlush(dpy);
-				*context = XCLIB_XCOUT_INCR;
-				return(0);
-			}
-
-			/* if it's not incr, and not format == 8, then there's
-			 * nothing in the selection (that xclip understands,
-			 * anyway)
-			 */ 
-			if (pty_format != 8)
-			{
-				*context = XCLIB_XCOUT_NONE;
-				return(0);
-			}
-
-			/* not using INCR mechanism, just read the property */
-			XGetWindowProperty(
-				dpy,
-				win,
-				pty,
-				0,
-				(long)pty_size,
-				False,
-				AnyPropertyType,
-				&pty_type,
-				&pty_format,
-				&pty_items,
-				&pty_size,
-				&buffer
-			);
+  case XCLIB_XCOUT_INCR: {
+    /* To use the INCR method, we basically delete the
+     * property with the selection in it, wait for an
+     * event indicating that the property has been created,
+     * then read it, delete it, etc.
+     */
+    
+    /* make sure that the event is relevant */
+    if ((evt->response_type & ~0x80) != XCB_PROPERTY_NOTIFY)
+      return 0;
+    
+    xcb_property_notify_event_t *const prop_event = (xcb_property_notify_event_t *)evt;
+    /* skip unless the property has a new value */
+    if (prop_event->state != XCB_PROPERTY_NEW_VALUE)
+      return 0;
 	
-			/* finished with property, delete it */
-			XDeleteProperty(dpy, win, pty);
-		
-			/* copy the buffer to the pointer for returned data */
-			ltxt = (unsigned char *)xcmalloc(pty_items);
-			memcpy(ltxt, buffer, pty_items);
+    xcb_get_property_cookie_t cookie = xcb_get_any_property(xconn, false,
+							    win, xclip_out_atom,
+							    0);
+    xcb_get_property_reply_t *reply = xcb_get_property_reply(xconn, cookie, 0);
+    
+    if ( reply->format != 8 ) {
+      /* property does not contain text, delete it
+       * to tell the other X client that we have read
+       * it and to send the next property
+       */
+      xcb_delete_property_checked(xconn, win, xclip_out_atom);
+      return 0;
+    }
 
-			/* set the length of the returned data */
-			*len = pty_items;
-			*txt = ltxt;
+    if (reply->bytes_after == 0) {
+      /* no more data, exit from loop */
+      xcb_delete_property_checked(xconn, win, xclip_out_atom);
+      *context = XCLIB_XCOUT_NONE;
+      
+      /* this means that an INCR transfer is now
+       * complete, return 1
+       */
+      return 1;
+    }
 
-			/* free the buffer */
-			XFree(buffer);
-			
-			*context = XCLIB_XCOUT_NONE;
+    /* if we have come this far, the propery contains
+     * text, we know the size.
+     */
+    cookie = xcb_get_any_property(xconn, false,
+				  win, xclip_out_atom,
+				  reply->bytes_after);
 
-			/* complete contents of selection fetched, return 1 */
-			return(1);
-	
-		case XCLIB_XCOUT_INCR:
-			/* To use the INCR method, we basically delete the
-			 * property with the selection in it, wait for an
-			 * event indicating that the property has been created,
-			 * then read it, delete it, etc.
-			 */
-
-			/* make sure that the event is relevant */
-			if (evt.type != PropertyNotify)
-				return(0);
-
-			/* skip unless the property has a new value */
-			if (evt.xproperty.state != PropertyNewValue)
-				return(0);
-	
-			/* check size and format of the property */
-			XGetWindowProperty(
-				dpy,
-				win,
-				pty,
-				0,
-				0,
-				False,
-				AnyPropertyType,
-				&pty_type,
-				&pty_format,
-				&pty_items,
-				&pty_size,
-				(unsigned char **)&buffer
-			);
-
-			if (pty_format != 8)
-			{
-				/* property does not contain text, delete it
-				 * to tell the other X client that we have read
-				 * it and to send the next property
-				 */
-				XFree(buffer);
-				XDeleteProperty(dpy, win, pty);
-				return(0);
-			}
-
-			if (pty_size == 0)
-			{
-				/* no more data, exit from loop */
-				XFree(buffer);
-				XDeleteProperty(dpy, win, pty);
-				*context = XCLIB_XCOUT_NONE;
-				
-				/* this means that an INCR transfer is now
-				 * complete, return 1
-				 */
-				return(1);
-			}
-
-			XFree(buffer);
-
-			/* if we have come this far, the propery contains
-			 * text, we know the size.
-			 */
-			XGetWindowProperty(
-				dpy,
-				win,
-				pty,
-				0,
-				(long)pty_size,
-				False,
-				AnyPropertyType,
-				&pty_type,
-				&pty_format,
-				&pty_items,
-				&pty_size,
-				(unsigned char **)&buffer
-			);
-			
-			/* allocate memory to accommodate data in *txt */
-			if (*len == 0)
-			{
-				*len = pty_items;
-				ltxt = (unsigned char *)xcmalloc(*len);
-			} else
-			{
-				*len += pty_items;
-				ltxt = (unsigned char *)xcrealloc(ltxt, *len);
-			}
-
-			/* add data to ltxt */
-			memcpy(
-				&ltxt[*len - pty_items],
-				buffer,
-				pty_items
-			);
-
-			*txt = ltxt;
-			XFree(buffer);
-			
-			/* delete property to get the next item */
-			XDeleteProperty(dpy, win, pty);
-			XFlush(dpy);
-			return(0);
-	}
-
-	return (0);
+    /* allocate memory to accommodate data in *txt */
+    uint32_t reply_size = xcb_get_property_value_length(reply);
+    *len += reply_size;
+    ltxt = xcrealloc(ltxt, *len);
+    
+    /* add data to ltxt */
+    memcpy(
+	   &ltxt[*len - reply_size],
+	   xcb_get_property_value(reply),
+	   reply_size
+	   );
+    
+    *txt = ltxt;
+    
+    /* delete property to get the next item */
+    xcb_delete_property_checked(xconn, win, xclip_out_atom);
+    xcb_flush(xconn);
+    return 0;
+  }
+  }
+  return 0;
 }
 
 /* put data into a selection, in response to a SelecionRequest event from
@@ -331,208 +278,163 @@ int xcout (
  *
  * The context that event is the be processed within.
  */
-int xcin (
-	Display *dpy,
-	Window *win,
-	XEvent evt,
-	Atom *pty,
-	unsigned char *txt,
-	unsigned long len,
-	unsigned long *pos,
-	unsigned int *context
+int xcin(xcb_connection_t* xconn,
+	 xcb_window_t* win,
+	 xcb_generic_event_t* evt,
+	 xcb_atom_t* pty,
+	 uint8_t* txt,
+	 size_t len,
+	 size_t* pos,
+	 uint32_t* context
 )
 {
-	unsigned long chunk_len;	/* length of current chunk (for incr
-					 * transfers only)
-					 */
-	XEvent		res;		/* response to event */
-	Atom		inc, targets;
+  find_internal_atoms(xconn);
 
-	targets = XInternAtom(dpy, "TARGETS", False);
-
-	switch (*context)
-	{
-		case XCLIB_XCIN_NONE:
-			if (evt.type != SelectionRequest)
-				return(0);
-		
-			/* set the window and property that is being used */
-			*win = evt.xselectionrequest.requestor;
-			*pty = evt.xselectionrequest.property;
-
-			/* reset position to 0 */
-			*pos = 0;
-		
-			/* put the data into an property */
-			if (evt.xselectionrequest.target == targets)
-			{
-				Atom types[2] = { targets, XA_STRING };
-			
-				/* send data all at once (not using INCR) */
-				XChangeProperty(
-					dpy,
-					*win,
-					*pty,
-					targets,
-					8,
-					PropModeReplace,
-					(unsigned char*) types,
-					(int)sizeof(types)
-			       );
-			} else if (len > XC_CHUNK)
-			{
-				/* INCR Atom to set response property to */
-				inc = XInternAtom(dpy, "INCR", False);
-			
-				/* send INCR response */
-				XChangeProperty(
-					dpy,
-					*win,	
-					*pty,
-					inc,
-					32,
-					PropModeReplace,
-					0,
-					0
-				);
-
-				/* With the INCR mechanism, we need to know
-				 * when the requestor window changes (deletes)
-				 * its properties
+  unsigned long chunk_len;	/* length of current chunk (for incr
+				 * transfers only)
 				 */
-				XSelectInput(
-					dpy,
-					*win,
-					PropertyChangeMask
-				);
 
-				*context = XCLIB_XCIN_INCR;
-			} else 
-			{
-				/* send data all at once (not using INCR) */
-				XChangeProperty(
-					dpy,
-					*win,
-					*pty,
-					XA_STRING,
-					8,
-					PropModeReplace,
-					(unsigned char*) txt,
-					(int)len
-			       );
-			}
-	
-			/* set values for the response event */
-			res.xselection.property =
-				*pty;
-			res.xselection.type =
-				SelectionNotify;
-			res.xselection.display =
-				evt.xselectionrequest.display;
-			res.xselection.requestor =
-				*win;
-			res.xselection.selection =
-				evt.xselectionrequest.selection;
-			res.xselection.target =
-				evt.xselectionrequest.target;
-			res.xselection.time =
-				evt.xselectionrequest.time;
+  xcb_void_cookie_t cookie;
+  switch (*context) {
+  case XCLIB_XCIN_NONE: {
+    if ((evt->response_type & ~0x80) != XCB_SELECTION_REQUEST)
+      return 0;
 
-			/* send the response event */
-			XSendEvent(
-				dpy,
-				evt.xselectionrequest.requestor,
-				0,
-				0,
-				&res
-			);
-			XFlush(dpy);
+    xcb_selection_request_event_t *req_event = (xcb_selection_request_event_t *)evt;
+    
+    /* set the window and property that is being used */
+    *win = req_event->requestor;
+    *pty = req_event->property;
 
-			/* if len < XC_CHUNK, then the data was sent all at
-			 * once and the transfer is now complete, return 1
-			 */
-			if (len > XC_CHUNK)
-				return(0);
-			else
-				return(1);
+    /* reset position to 0 */
+    *pos = 0;
+		
+    /* put the data into an property */
+    if (req_event->target == targets_atom) {
+      xcb_atom_t types[] = { targets_atom, STRING };
+			
+      /* send data all at once (not using INCR) */
+      cookie = xcb_change_property_checked(xconn,
+			  XCB_PROP_MODE_REPLACE,
+			  *win,
+			  *pty,
+			  targets_atom,
+			  8,
+			  sizeof(types), types);
+    } else if (len > XC_CHUNK) {
+      /* send INCR response */
+      cookie = xcb_change_property_checked(xconn,
+			  XCB_PROP_MODE_REPLACE,
+			  *win,
+			  *pty,
+			  incr_atom,
+			  32,
+			  0, NULL);
 
-			break;
+	*context = XCLIB_XCIN_INCR;
+    } else {
+      /* send data all at once (not using INCR) */
+      cookie = xcb_change_property_checked(xconn,
+			  XCB_PROP_MODE_REPLACE,
+			  *win,
+			  *pty,
+			  STRING,
+			  8,
+			  len, txt);
+    }
 
-		case XCLIB_XCIN_INCR:
-			/* length of current chunk */
+    xcb_perror(xconn, cookie, "cannot set data into property");
 
-			/* ignore non-property events */
-			if (evt.type != PropertyNotify)
-				return(0);
+    {
+      /* response to event */
+      xcb_selection_notify_event_t res = {
+	.response_type = XCB_SELECTION_NOTIFY,
+	.pad0 = 0,
+	.sequence = 0,
+	.time = XCB_CURRENT_TIME,
+	.requestor = *win,
+	.selection = req_event->selection,
+	.target = req_event->target,
+	.property = *pty
+      };
 
-			/* ignore the event unless it's to report that the
-			 * property has been deleted
-			 */
-			if (evt.xproperty.state != PropertyDelete)
-				return(0);
+      cookie = xcb_send_event_checked(xconn, false, req_event->requestor, 0, (char*)&res);
+    }
 
-			/* set the chunk length to the maximum size */
-			chunk_len = XC_CHUNK;
+    xcb_perror(xconn, cookie, "cannot set selection notify");
 
-			/* if a chunk length of maximum size would extend
-		 	 * beyond the end ot txt, set the length to be the
-		 	 * remaining length of txt
-		 	 */
-			if ( (*pos + chunk_len) > len )
-				chunk_len = len - *pos;
+    /* if len < XC_CHUNK, then the data was sent all at
+     * once and the transfer is now complete, return 1
+     */
+    return !(len > XC_CHUNK);
 
-			/* if the start of the chunk is beyond the end of txt,
-			 * then we've already sent all the data, so set the
-			 * length to be zero
-			 */
-			if (*pos > len)
-				chunk_len = 0;
+  case XCLIB_XCIN_INCR:
+    /* length of current chunk */
 
-			if (chunk_len)
-			{
-				/* put the chunk into the property */
-				XChangeProperty(
-					dpy,
-					*win,
-					*pty,
-					XA_STRING,
-					8,
-					PropModeReplace,
-					&txt[*pos],
-					(int)chunk_len
-				);
-			} else
-			{
-				/* make an empty property to show we've
-				 * finished the transfer
-				 */
-				XChangeProperty(
-					dpy,
-					*win,
-					*pty,
-					XA_STRING,
-					8,
-					PropModeReplace,
-					0,
-					0	
-				);
-			}
-			XFlush(dpy);
+    /* ignore non-property events */
+    if ((evt->response_type & ~0x80) != XCB_PROPERTY_NOTIFY)
+      return 0;
 
-			/* all data has been sent, break out of the loop */
-			if (!chunk_len)
-				*context = XCLIB_XCIN_NONE;
+    xcb_property_notify_event_t *notify_event = (xcb_property_notify_event_t *)evt;
 
-			*pos += XC_CHUNK;
+    /* ignore the event unless it's to report that the
+     * property has been deleted
+     */
+    if (notify_event->state != XCB_PROPERTY_NOTIFY)
+      return 0;
 
-			/* if chunk_len == 0, we just finished the transfer,
-			 * return 1
-			 */
-			if (chunk_len > 0)
-				return(0);
-			else
-				return(1);
-			break;
-	}
-	return(0);
+    /* set the chunk length to the maximum size */
+    chunk_len = XC_CHUNK;
+
+    /* if a chunk length of maximum size would extend
+     * beyond the end ot txt, set the length to be the
+     * remaining length of txt
+     */
+    if ( (*pos + chunk_len) > len )
+      chunk_len = len - *pos;
+
+    /* if the start of the chunk is beyond the end of txt,
+     * then we've already sent all the data, so set the
+     * length to be zero
+     */
+    if (*pos > len)
+      chunk_len = 0;
+
+    if (chunk_len) {
+      /* put the chunk into the property */
+      xcb_change_property_checked(xconn,
+			  XCB_PROP_MODE_REPLACE,
+			  *win,
+			  *pty,
+			  STRING,
+			  8,
+			  chunk_len, &txt[*pos]);
+    } else {
+      /* make an empty property to show we've
+       * finished the transfer
+       */
+      xcb_change_property_checked(xconn,
+			  XCB_PROP_MODE_REPLACE,
+			  *win,
+			  *pty,
+			  STRING,
+			  8,
+			  0, NULL);
+    }
+    xcb_flush(xconn);
+
+    /* all data has been sent, break out of the loop */
+    if (!chunk_len)
+      *context = XCLIB_XCIN_NONE;
+
+    *pos += XC_CHUNK;
+
+    /* if chunk_len == 0, we just finished the transfer,
+     * return 1
+     */
+    return !(chunk_len > 0);
+  }
+  }
+
+  return 0;
 }

@@ -117,3 +117,13 @@ void perrorf(char *format, ...)
 	/* free the complete string */
 	free(prefix);
 }
+
+void xcb_perror(xcb_connection_t *xconn, xcb_void_cookie_t cookie, const char *errstr) {
+  xcb_generic_error_t *error = xcb_request_check(xconn, cookie);
+  if ( error == NULL )
+    return;
+  
+  fprintf(stderr, "ERROR: %s: %d\n", errstr, error->error_code);
+  xcb_disconnect(xconn);
+  abort();
+}

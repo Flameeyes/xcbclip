@@ -21,7 +21,7 @@
  *  along with xcbclip.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <X11/Xlib.h>
+#include <xcb/xcb.h>
 
 /* xcout() contexts */
 #define XCLIB_XCOUT_NONE	0	/* no context */
@@ -35,23 +35,23 @@
 
 /* functions in xclib.c */
 extern int xcout(
-	Display*,
-	Window,
-	XEvent,
-	Atom,
-	unsigned char**,
-	unsigned long*,
-	unsigned int*
+	xcb_connection_t*,
+	xcb_window_t,
+	xcb_generic_event_t*,
+	xcb_atom_t,
+	uint8_t**,
+	size_t*,
+	uint32_t*
 );
 extern int xcin(
-	Display*,
-	Window*,
-	XEvent,
-	Atom*,
-	unsigned char*,
-	unsigned long,
-	unsigned long*,
-	unsigned int*
+	xcb_connection_t*,
+	xcb_window_t*,
+	xcb_generic_event_t*,
+	xcb_atom_t*,
+	uint8_t*,
+	size_t,
+	size_t*,
+	uint32_t*
 );
 extern void *xcmalloc(size_t);
 extern void *xcrealloc(void*, size_t);

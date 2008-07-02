@@ -21,6 +21,8 @@
  *  along with xcbclip.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <xcb/xcb.h>
+
 /* functions in xcprint.c */
 extern void prhelp(char *);
 extern void prversion(void);
@@ -32,3 +34,5 @@ void perrorf(char *format, ...)
   __attribute__((format(printf(1, 2))))
 #endif
   ;
+
+void xcb_perror(xcb_connection_t *xconn, xcb_void_cookie_t cookie, const char *errstr);

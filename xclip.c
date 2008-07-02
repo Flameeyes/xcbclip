@@ -28,25 +28,27 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <ctype.h>
-#include <X11/Xlib.h>
-#include <X11/Xatom.h>
-#include <X11/Xmu/Atoms.h>
+#include <string.h>
+
+#include <X11/Xresource.h>
+#include <xcb/xcb.h>
+#include <xcb/xcb_atom.h>
 #include "xcdef.h"
 #include "xcprint.h"
 #include "xclib.h"
-
+#include "xcb-contrib.h"
 
 /* Options that get set on the command line */
 int             sloop = 0;			/* number of loops */
 char           *sdisp = NULL;			/* X display to connect to */
-Atom            sseln = XA_PRIMARY;		/* X selection to work with */
+xcb_atom_t      sseln;				/* X selection to work with */
 
 /* Flags for command line options */
 static int      fverb = OSILENT;		/* output level */
 static int      fdiri = true;			/* direction is in */
 static int      ffilt = false;			/* filter mode */
 
-Display	       *dpy;				/* connection to X11 display */
+static xcb_connection_t	*xconn;				/* connection to X11 display */
 XrmDatabase     opt_db = NULL;			/* database for options */
 
 char          **fil_names;			/* names of files to read */
@@ -289,6 +291,8 @@ static void doOptMain (int argc, char *argv[])
 /* process selection command line option */
 static void doOptSel (void)
 {
+  sseln = PRIMARY;
+
 	/* set selection to work with */
 	if (
 		XrmGetResource(
@@ -303,16 +307,17 @@ static void doOptSel (void)
 		switch (tolower(rec_val.addr[0]))
 		{
 			case 'p':
-				sseln = XA_PRIMARY;
+				sseln = PRIMARY;
 				break;
 			case 's':
-				sseln = XA_SECONDARY;
+				sseln = SECONDARY;
 				break;
 			case 'c':
-				sseln = XA_CLIPBOARD(dpy);
+			  // TODO! FIX THIS
+			  sseln = PRIMARY; // XA_CLIPBOARD(dpy);
 				break;
 			case 'b':
-				sseln = XA_STRING;
+				sseln = STRING;
 				break;
 		}
     
@@ -320,313 +325,297 @@ static void doOptSel (void)
 		{
 			fprintf(stderr, "Using selection: ");
 	   
-			if (sseln == XA_PRIMARY)
-				fprintf(stderr, "XA_PRIMARY");
-			if (sseln == XA_SECONDARY)
-				fprintf(stderr, "XA_SECONDARY");
+			if (sseln == PRIMARY)
+				fprintf(stderr, "PRIMARY");
+			if (sseln == SECONDARY)
+				fprintf(stderr, "SECONDARY");
+#if 0
 			if (sseln == XA_CLIPBOARD(dpy))
-				fprintf(stderr, "XA_CLIPBOARD");
-			if (sseln == XA_STRING)
-				fprintf(stderr, "XA_STRING");
+				fprintf(stderr, "CLIPBOARD");
+#endif
+
+			if (sseln == STRING)
+				fprintf(stderr, "STRING");
 
 			fprintf(stderr, "\n");
 		}
 	}
 }
 
-static void doIn(Window win, const char *progname)
+static void doIn(xcb_window_t win, const char *progname)
 {
-	unsigned char *sel_buf;		/* buffer for selection data */
-	unsigned long sel_len = 0;	/* length of sel_buf */
-	unsigned long sel_all = 0;	/* allocated size of sel_buf */
-	XEvent evt;			/* X Event Structures */
-	int dloop = 0;			/* done loops counter */
+  size_t sel_len = 0;	/* length of sel_buf */
+  size_t sel_all = 16;	/* allocated size of sel_buf */
+  int dloop = 0;	/* done loops counter */
 
-	/* in mode */
-	sel_all = 16;		/* Reasonable ballpark figure */
-	sel_buf = xcmalloc(sel_all * sizeof(char));
+  /* in mode */
+  /* buffer for selection data */
+  uint8_t *sel_buf = xcmalloc(sel_all * sizeof(char));
 
-	/* Put chars into inc from stdin or files until we hit EOF */
-	do {
-		if (fil_number == 0)
-		{
-			/* read from stdin if no files specified */
-			fil_handle = stdin;
-		} else
-		{
-			if (
-					(fil_handle = fopen(
-										fil_names[fil_current],
-										"r"
-									   )) == NULL
-			   )
-			{
-			  perrorf("%s: %s", progname, fil_names[fil_current]);
-			  exit(EXIT_FAILURE);
-			} else
-			{
-				/* file opened successfully. Print
-				 * message (verbose mode only).
-				 */
-				if (fverb == OVERBOSE)
-					fprintf(
-							stderr,
-							"Reading %s...\n",
-							fil_names[fil_current]
-						   );
-			}
-		}
+  /* Put chars into inc from stdin or files until we hit EOF */
+  do {
+    if (fil_number == 0) {
+      /* read from stdin if no files specified */
+      fil_handle = stdin;
+    } else if (
+	       (fil_handle = fopen(
+				   fil_names[fil_current],
+				   "r"
+				   )) == NULL
+	       ) {
+      perrorf("%s: %s", progname, fil_names[fil_current]);
+      exit(EXIT_FAILURE);
+    } else {
+      /* file opened successfully. Print
+       * message (verbose mode only).
+       */
+      if (fverb == OVERBOSE)
+	fprintf(stderr, "Reading %s...\n", fil_names[fil_current]);
+    }
 
-		fil_current++;
-		while (!feof(fil_handle))
-		{
-			/* If sel_buf is full (used elems =
-			 * allocated elems)
-			 */
-			if (sel_len == sel_all)
-			{
-				/* double the number of
-				 * allocated elements
-				 */
-				sel_all *= 2;
-				sel_buf = (unsigned char *)xcrealloc(
-						sel_buf,
-						sel_all * sizeof(char)
-						);
-			}
-			sel_len += fread(
-					sel_buf + sel_len,
-					sizeof(char),
-					sel_all - sel_len,
-					fil_handle
-					);
-		}
-	} while (fil_current < fil_number);
-
-	/* if there are no files being read from (i.e., input
-	 * is from stdin not files, and we are in filter mode,
-	 * spit all the input back out to stdout
+    fil_current++;
+    while (!feof(fil_handle)) {
+      /* If sel_buf is full (used elems =
+       * allocated elems)
+       */
+      if (sel_len == sel_all) {
+	/* double the number of
+	 * allocated elements
 	 */
-	if ((fil_number == 0) && ffilt)
-	{
-		fwrite(sel_buf, sizeof(char), sel_len, stdout); 
-		fclose(stdout);
-	}
+	sel_all *= 2;
+	sel_buf = xcrealloc(sel_buf, sel_all * sizeof(char));
+      }
+      sel_len += fread(
+		       sel_buf + sel_len,
+		       sizeof(char),
+		       sel_all - sel_len,
+		       fil_handle
+		       );
+    }
+  } while (fil_current < fil_number);
 
-	/* Handle cut buffer if needed */
-	if (sseln == XA_STRING)
-	{
-		XStoreBuffer(dpy, (char *)sel_buf, (int)sel_len, 0);
-		return;
-	}
+  /* if there are no files being read from (i.e., input
+   * is from stdin not files, and we are in filter mode,
+   * spit all the input back out to stdout
+   */
+  if ((fil_number == 0) && ffilt) {
+    fwrite(sel_buf, sizeof(char), sel_len, stdout); 
+    fclose(stdout);
+  }
+
+  /* Handle cut buffer if needed */
+  if (sseln == STRING) {
+    xcb_change_property_checked(xconn,
+			XCB_PROP_MODE_REPLACE,
+			win,
+			CUT_BUFFER0,
+			STRING,
+			8,
+			sel_len, sel_buf);
+    return;
+  }
 	
-	/* take control of the selection so that we receive
-	 * SelectionRequest events from other windows
-	 */
-	XSetSelectionOwner(dpy, sseln, win, CurrentTime);
+  /* take control of the selection so that we receive
+   * SelectionRequest events from other windows
+   */
+  xcb_void_cookie_t cookie = xcb_set_selection_owner_checked(xconn, win, sseln, XCB_CURRENT_TIME);
 
-	/* fork into the background, exit parent process if we
-	 * are in silent mode
-	 */
-	if (fverb == OSILENT)
-	{
-		pid_t pid;
+  xcb_perror(xconn, cookie, "cannot set selection owner");
 
-		pid = fork();
-		/* exit the parent process; */
-		if (pid)
-			exit(EXIT_SUCCESS);
-	}
+  /* fork into the background, exit parent process if we
+   * are in silent mode
+   */
+  if (fverb == OSILENT)
+    {
+      pid_t pid;
 
-	/* print a message saying what we're waiting for */
-	if (fverb > OSILENT)
-	{
-		if (sloop == 1)
-			fprintf(
-					stderr,
-					"Waiting for one selection request.\n"
-				   );
+      pid = fork();
+      /* exit the parent process; */
+      if (pid)
+	exit(EXIT_SUCCESS);
+    }
 
-		if (sloop  < 1)
-			fprintf(
-					stderr,
-					"Waiting for selection requests, Control-C to quit\n"
-				   );
+  /* print a message saying what we're waiting for */
+  if (fverb > OSILENT) {
+    if (sloop == 1)
+      fprintf(
+	      stderr,
+	      "Waiting for one selection request.\n"
+	      );
 
-		if (sloop  > 1)
-			fprintf(
-					stderr,
-					"Waiting for %i selection requests, Control-C to quit\n",
-					sloop
-				   );
-	}
+    if (sloop  < 1)
+      fprintf(
+	      stderr,
+	      "Waiting for selection requests, Control-C to quit\n"
+	      );
 
-	/* Avoid making the current directory in use, in case it will need to be umounted */
-	chdir("/");
+    if (sloop  > 1)
+      fprintf(
+	      stderr,
+	      "Waiting for %i selection requests, Control-C to quit\n",
+	      sloop
+	      );
+  }
+
+  /* Avoid making the current directory in use, in case it will need to be umounted */
+  chdir("/");
 	
-	/* loop and wait for the expected number of
-	 * SelectionRequest events
-	 */
-	while (dloop < sloop || sloop < 1)
-	{
-		/* print messages about what we're waiting for
-		 * if not in silent mode
-		 */
-		if (fverb > OSILENT)
-		{
-			if (sloop  > 1)
-				fprintf(
-						stderr,
-						"  Waiting for selection request %i of %i.\n",
-						dloop + 1,
-						sloop
-					   );
+  /* loop and wait for the expected number of
+   * SelectionRequest events
+   */
+  while (dloop < sloop || sloop < 1) {
+    /* print messages about what we're waiting for
+     * if not in silent mode
+     */
+    if (fverb > OSILENT) {
+      if (sloop  > 1)
+	fprintf(
+		stderr,
+		"  Waiting for selection request %i of %i.\n",
+		dloop + 1,
+		sloop
+		);
 
-			if (sloop == 1)
-				fprintf(
-						stderr,
-						"  Waiting for a selection request.\n"
-					   );
+      if (sloop == 1)
+	fprintf(
+		stderr,
+		"  Waiting for a selection request.\n"
+		);
 
-			if (sloop  < 1)
-				fprintf(
-						stderr,
-						"  Waiting for selection request number %i\n",
-						dloop + 1
-					   );
-		}
+      if (sloop  < 1)
+	fprintf(
+		stderr,
+		"  Waiting for selection request number %i\n",
+		dloop + 1
+		);
+    }
 
-		/* wait for a SelectionRequest event */
-		while (1)
-		{
-			static unsigned int clear = 0;
-			static unsigned int context = XCLIB_XCIN_NONE;
-			static unsigned long sel_pos = 0;
-			static Window cwin;
-			static Atom pty;
-			int finished;
+    /* wait for a SelectionRequest event */
+    static unsigned int context = XCLIB_XCIN_NONE;
+    static unsigned long sel_pos = 0;
+    static xcb_window_t cwin;
+    static xcb_atom_t pty;
 
-			XNextEvent(dpy, &evt);
+    xcb_generic_event_t *event;
+    bool clear = false;
+    while ((event = xcb_wait_for_event(xconn))) {
+      fprintf(stderr, "response_type: %08x\n", event->response_type);
 
-			finished = xcin(
-					dpy,
-					&cwin,
-					evt,
-					&pty,
-					sel_buf,
-					sel_len,
-					&sel_pos,
-					&context
-					);
+      bool finished = xcin(
+			   xconn,
+			   &cwin,
+			   event,
+			   &pty,
+			   sel_buf,
+			   sel_len,
+			   &sel_pos,
+			   &context
+			   );
 
-			if (evt.type == SelectionClear)
-				clear = 1;
+      if ( (event->response_type & ~0x80) == XCB_SELECTION_CLEAR )
+	clear = true;
 
-			if ( (context == XCLIB_XCIN_NONE) && clear)
-				exit(EXIT_SUCCESS);
+      if ( (context == XCLIB_XCIN_NONE) && clear)
+	return;
 
-			if (finished)
-				break;
-		}
+      if (finished)
+	break;
+    }
 
-		dloop++;	/* increment loop counter */
-	}
+    dloop++;	/* increment loop counter */
+  }
 }
 
-static void doOut(Window win)
+static void doOut(xcb_window_t win)
 {
-	unsigned char *sel_buf;		/* buffer for selection data */
-	unsigned long sel_len = 0;	/* length of sel_buf */
-	XEvent evt;			/* X Event Structures */
-	unsigned int context = XCLIB_XCOUT_NONE;
+  uint8_t *sel_buf = NULL;	/* buffer for selection data */
+  size_t sel_len = 0;		/* length of sel_buf */
 
-	if (sseln == XA_STRING)
-		sel_buf = (unsigned char *)XFetchBuffer(dpy, (int *)&sel_len, 0);
-	else
-	{
-		while (1)
-		{
-			/* only get an event if xcout() is doing something */
-			if (context != XCLIB_XCOUT_NONE)
-				XNextEvent(dpy, &evt);
+  if (sseln == STRING) {
+    uint8_t format; uint32_t prop_len;
+    int res = xcb_get_text_property(xconn, win, CUT_BUFFER0,
+				    &format, NULL, &prop_len, (char**)&sel_buf);
 
-			/* fetch the selection, or part of it */
-			xcout(
-					dpy,
-					win,
-					evt,
-					sseln,
-					&sel_buf,
-					&sel_len,
-					&context
-				 );
+    if ( res == 0 || format != 8 ) {
+      free(sel_buf);
+      return;
+    }
 
-			/* only continue if xcout() is doing something */
-			if (context == XCLIB_XCOUT_NONE)
-				break;
-		}
-	}
+    sel_len = prop_len;
+  } else {
+    xcb_generic_event_t *event;
+    unsigned int context = XCLIB_XCOUT_NONE;
+    while (1) {
+      /* only get an event if xcout() is doing something */
+      if (context != XCLIB_XCOUT_NONE)
+	event = xcb_wait_for_event(xconn);
 
-	if (sel_len)
-	{
-		/* only print the buffer out, and free it, if it's not
-		 * empty
-		 */
-		fwrite(sel_buf, sizeof(char), sel_len, stdout);
-		if (sseln == XA_STRING)
-			XFree(sel_buf);
-		else
-			free(sel_buf);
-	}
+      /* fetch the selection, or part of it */
+      xcout(
+	    xconn,
+	    win,
+	    event,
+	    sseln,
+	    &sel_buf,
+	    &sel_len,
+	    &context
+	    );
+
+      /* only continue if xcout() is doing something */
+      if (context == XCLIB_XCOUT_NONE)
+	break;
+    }
+  }
+
+  fwrite(sel_buf, sizeof(char), sel_len, stdout);
+  free(sel_buf);
 }
 
 int main (int argc, char *argv[])
 {
-	/* Declare variables */
-	Window win;			/* Window */
-
-	/* parse command line options */
-	doOptMain(argc, argv);
-   
-	/* Connect to the X server. */
-	if ( (dpy = XOpenDisplay(sdisp)) )
-	{
-		/* successful */
-		if (fverb == OVERBOSE)
-			fprintf(stderr, "Connected to X server.\n");
-	} else
-	{
-		/* couldn't connect to X server. Print error and exit */
-		errxdisplay(sdisp);
-	}
-
-	/* parse selection command line option */
-	doOptSel();
+  /* parse command line options */
+  doOptMain(argc, argv);
   
-	/* Create a window to trap events */
-	win = XCreateSimpleWindow(
-		dpy,
-		DefaultRootWindow(dpy),
-		0,
-		0,
-		1,
-		1,
-		0,
-		0,
-		0
-	);
+  /* Connect to the X server. */
+  if ( (xconn = xcb_connect(sdisp, NULL)) == NULL )
+    /* couldn't connect to X server. Print error and exit */
+    errxdisplay(sdisp);
+  else
+    /* successful */
+    if (fverb == OVERBOSE)
+      fprintf(stderr, "Connected to X server on %s.\n", sdisp);
+    
+  /* parse selection command line option */
+  doOptSel();
 
-	/* get events about property changes */
-	XSelectInput(dpy, win, PropertyChangeMask);
+  /* Get the first screen*/
+  xcb_screen_t *screen = xcb_setup_roots_iterator(xcb_get_setup(xconn)).data;
+
+  /* Ask for a new window ID */
+  xcb_window_t win = xcb_generate_id(xconn);
+
+  static const uint32_t values[] = { XCB_EVENT_MASK_PROPERTY_CHANGE };
+
+  /* Create a window to trap events */
+  xcb_void_cookie_t cookie = xcb_create_window(xconn,
+			    XCB_COPY_FROM_PARENT,
+			    win,
+			    screen->root,
+			    0, 0, 1, 1,
+			    0, XCB_WINDOW_CLASS_INPUT_OUTPUT,
+			    screen->root_visual,
+			    XCB_CW_EVENT_MASK, values);
+
+  xcb_perror(xconn, cookie, "cannot create window");
+
+  if (fdiri)
+    doIn(win, argv[0]);
+  else
+    doOut(win);
+
+  /* Disconnect from the X server */
+  xcb_disconnect(xconn);
   
-	if (fdiri)
-		doIn(win, argv[0]);
-	else
-		doOut(win);
-
-	/* Disconnect from the X server */
-	XCloseDisplay(dpy);
-
-	/* exit */
-	return(EXIT_SUCCESS);
+  /* exit */
+  return(EXIT_SUCCESS);
 }
