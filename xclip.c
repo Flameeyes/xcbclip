@@ -499,8 +499,6 @@ static void doIn(xcb_window_t win, const char *progname)
     xcb_generic_event_t *event;
     bool clear = false;
     while ((event = xcb_wait_for_event(xconn))) {
-      fprintf(stderr, "response_type: %08x\n", event->response_type);
-
       bool finished = xcin(
 			   xconn,
 			   &cwin,
