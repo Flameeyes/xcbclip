@@ -112,7 +112,7 @@ int xcout(
 	xcb_window_t win,
 	xcb_generic_event_t* evt,
 	xcb_atom_t sel,
-	uint8_t** txt,
+	char** txt,
 	size_t* len,
 	uint32_t* context
 )
@@ -120,7 +120,7 @@ int xcout(
   find_internal_atoms(xconn);
 
   /* local buffer of text to return */
-  uint8_t *ltxt = *txt;
+  char *ltxt = *txt;
 
   xcb_void_cookie_t cookie;
   switch (*context) {

@@ -39,7 +39,7 @@ extern int xcout(
 	xcb_window_t,
 	xcb_generic_event_t*,
 	xcb_atom_t,
-	uint8_t**,
+	char**,
 	size_t*,
 	uint32_t*
 );

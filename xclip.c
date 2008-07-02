@@ -526,13 +526,13 @@ static void doIn(xcb_window_t win, const char *progname)
 
 static void doOut(xcb_window_t win)
 {
-  uint8_t *sel_buf = NULL;	/* buffer for selection data */
+  char *sel_buf = NULL;	/* buffer for selection data */
   size_t sel_len = 0;		/* length of sel_buf */
 
   if (sseln == STRING) {
     uint8_t format; uint32_t prop_len;
     int res = xcb_get_text_property(xconn, win, CUT_BUFFER0,
-				    &format, NULL, &prop_len, (char**)&sel_buf);
+				    &format, NULL, &prop_len, &sel_buf);
 
     if ( res == 0 || format != 8 ) {
       free(sel_buf);
