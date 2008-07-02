@@ -31,7 +31,7 @@ extern void errxdisplay(char *);
 
 void perrorf(char *format, ...)
 #ifdef SUPPORT_ATTRIBUTE_FORMAT
-  __attribute__((format(printf(1, 2))))
+  __attribute__((format(printf, 1, 2)))
 #endif
   ;
 
