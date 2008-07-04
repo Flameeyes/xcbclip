@@ -109,7 +109,7 @@ void perrorf(char *format, ...)
 	va_start(ap, format);
 
 	char *prefix = NULL;
-	asprintf(&prefix, format, ap);
+	vasprintf(&prefix, format, ap);
 	va_end(ap);
 
 	perror(prefix);
