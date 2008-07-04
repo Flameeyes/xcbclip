@@ -60,8 +60,6 @@ FILE*           fil_handle = NULL;
 XrmValue        rec_val;
 char           *rec_typ;
 
-int		tempi = 0;
-
 /* Use XrmParseCommand to parse command line options to option variable */
 static void doOptMain (int argc, char *argv[])
 {
