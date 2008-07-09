@@ -461,7 +461,6 @@ void doIn()
  * otherwise it's 0.
  */
 static int doOut_internal_loop(
-	xcb_window_t win,
 	xcb_generic_event_t* evt,
 	xcb_atom_t sel,
 	char** txt,
@@ -483,7 +482,7 @@ static int doOut_internal_loop(
     }
 
     /* send a selection request */
-    cookie = xcb_convert_selection_checked(xconn, win, sel, STRING,
+    cookie = xcb_convert_selection_checked(xconn, xwin, sel, STRING,
 					   xclip_out_atom, XCB_CURRENT_TIME);
 
     xcb_perror(cookie, "cannot convert selection");
@@ -495,14 +494,14 @@ static int doOut_internal_loop(
     if ((evt->response_type & ~0x80) != XCB_SELECTION_NOTIFY)
       return 0;
 
-    xcb_get_property_cookie_t cookie = xcb_get_property(xconn, false, win,
+    xcb_get_property_cookie_t cookie = xcb_get_property(xconn, false, xwin,
 							xclip_out_atom, STRING, 0, 128);
     xcb_get_property_reply_t *reply = xcb_get_property_reply(xconn, cookie, 0);
 
     assert(reply != NULL);
 
     if ( reply->type == incr_atom ) {
-      xcb_delete_property(xconn, win, xclip_out_atom);
+      xcb_delete_property(xconn, xwin, xclip_out_atom);
       xcb_flush(xconn);
       *context = XCLIP_OUT_INCR;
       return 0;
@@ -512,7 +511,7 @@ static int doOut_internal_loop(
     
     uint32_t reply_len = xcb_get_property_value_length(reply) * (reply->format / 8);
     if(reply->bytes_after) {
-      cookie = xcb_get_property(xconn, 0, win, xclip_out_atom, reply->type, 0, reply_len);
+      cookie = xcb_get_property(xconn, 0, xwin, xclip_out_atom, reply->type, 0, reply_len);
       free(reply);
       reply = xcb_get_property_reply(xconn, cookie, 0);
       assert(reply != NULL);
@@ -525,7 +524,7 @@ static int doOut_internal_loop(
     
     /* finished with property, delete it */
     free(reply);
-    xcb_delete_property_checked(xconn, win, xclip_out_atom);
+    xcb_delete_property_checked(xconn, xwin, xclip_out_atom);
     
     *context = XCLIP_OUT_NONE;
 
@@ -550,7 +549,7 @@ static int doOut_internal_loop(
       return 0;
 	
     xcb_get_property_cookie_t cookie = xcb_get_any_property(xconn, false,
-							    win, xclip_out_atom,
+							    xwin, xclip_out_atom,
 							    0);
     xcb_get_property_reply_t *reply = xcb_get_property_reply(xconn, cookie, 0);
     
@@ -559,13 +558,13 @@ static int doOut_internal_loop(
        * to tell the other X client that we have read
        * it and to send the next property
        */
-      xcb_delete_property_checked(xconn, win, xclip_out_atom);
+      xcb_delete_property_checked(xconn, xwin, xclip_out_atom);
       return 0;
     }
 
     if (reply->bytes_after == 0) {
       /* no more data, exit from loop */
-      xcb_delete_property_checked(xconn, win, xclip_out_atom);
+      xcb_delete_property_checked(xconn, xwin, xclip_out_atom);
       *context = XCLIP_OUT_NONE;
       
       /* this means that an INCR transfer is now
@@ -578,7 +577,7 @@ static int doOut_internal_loop(
      * text, we know the size.
      */
     cookie = xcb_get_any_property(xconn, false,
-				  win, xclip_out_atom,
+				  xwin, xclip_out_atom,
 				  reply->bytes_after);
 
     /* allocate memory to accommodate data in *txt */
@@ -601,7 +600,7 @@ static int doOut_internal_loop(
     *txt = ltxt;
     
     /* delete property to get the next item */
-    xcb_delete_property_checked(xconn, win, xclip_out_atom);
+    xcb_delete_property_checked(xconn, xwin, xclip_out_atom);
     xcb_flush(xconn);
     return 0;
   }
@@ -637,7 +636,6 @@ void doOut()
 
       /* fetch the selection, or part of it */
       doOut_internal_loop(
-	    xwin,
 	    event,
 	    sseln,
 	    &sel_buf,
