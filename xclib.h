@@ -23,35 +23,21 @@
 
 #include <xcb/xcb.h>
 
-/* xcout() contexts */
-#define XCLIB_XCOUT_NONE	0	/* no context */
-#define XCLIB_XCOUT_SENTCONVSEL	1	/* sent a request */
-#define XCLIB_XCOUT_INCR	2	/* in an incr loop */
+extern int sloop;
+extern char *sdisp;
+extern xcb_atom_t sseln;
 
-/* xcin() contexts */
-#define XCLIB_XCIN_NONE		0
-#define XCLIB_XCIN_SELREQ	1
-#define XCLIB_XCIN_INCR		2
+extern int fverb;
+extern int fdiri;
+extern int ffilt;
+
+extern xcb_connection_t *xconn;				/* connection to X11 display */
 
 extern const char *progname;
 
-/* functions in xclib.c */
-extern int xcout(
-	xcb_connection_t*,
-	xcb_window_t,
-	xcb_generic_event_t*,
-	xcb_atom_t,
-	char**,
-	size_t*,
-	uint32_t*
-);
-extern int xcin(
-	xcb_connection_t*,
-	xcb_window_t*,
-	xcb_generic_event_t*,
-	xcb_atom_t*,
-	uint8_t*,
-	size_t,
-	size_t*,
-	uint32_t*
-);
+extern char **params;
+extern int params_count;
+
+void doIn();
+void doOut();
+
