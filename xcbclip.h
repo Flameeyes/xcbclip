@@ -47,9 +47,6 @@ extern xcb_window_t xwin;
 
 extern const char *progname;
 
-extern char **params;
-extern int params_count;
-
 /* xclib.c */
 void do_in_string(char *buf, size_t len);
 void do_out_string();

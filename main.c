@@ -61,9 +61,9 @@ xcb_window_t xwin;
 const char *progname = NULL;
 
 /** the start of the non-option parameters */
-char **params = NULL;
+static char **params = NULL;
 /** the number of non-option parameters */
-int params_count = 0;
+static int params_count = 0;
 
 /* Use XrmParseCommand to parse command line options to option variable */
 static void doOptMain (int argc, char *argv[])
