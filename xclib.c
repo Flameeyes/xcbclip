@@ -33,7 +33,7 @@
 #include <xcb/xcb_property.h>
 #include "xcdef.h"
 #include "xcprint.h"
-#include "xclib.h"
+#include "xcbclip.h"
 #include "xcb-contrib.h"
 
 typedef enum {

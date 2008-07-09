@@ -11,7 +11,7 @@ bin_PROGRAMS = xcbclip
 xcbclip_SOURCES = \
 	xcdef.h \
 	xclib.c \
-	xclib.h \
+	xcbclip.h \
 	main.c \
 	xcb-contrib.c \
 	xcb-contrib.h \

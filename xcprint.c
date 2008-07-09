@@ -28,7 +28,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include "xcdef.h"
-#include "xclib.h"
+#include "xcbclip.h"
 #include "xcprint.h"
 
 /* a wrapper for perror that joins multiple prefixes together. Arguments

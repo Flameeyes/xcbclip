@@ -36,7 +36,7 @@
 #include <xcb/xcb_atom.h>
 #include "xcdef.h"
 #include "xcprint.h"
-#include "xclib.h"
+#include "xcbclip.h"
 
 /* Options that get set on the command line */
 int             sloop = 0;			/* number of loops */
