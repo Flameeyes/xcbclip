@@ -281,8 +281,6 @@ static void read_all(FILE *stream, uint8_t **buf, size_t *len, size_t *size) {
 
 void doIn()
 {
-  find_internal_atoms();
-
   size_t sel_len = 0;	/* length of sel_buf */
   size_t sel_all = 16;	/* allocated size of sel_buf */
   int dloop = 0;	/* done loops counter */
@@ -407,6 +405,8 @@ void doIn()
 		dloop + 1
 		);
     }
+
+    find_internal_atoms();
 
     /* wait for a SelectionRequest event */
     static unsigned int context = XCLIP_IN_NONE;
@@ -611,8 +611,6 @@ static int doOut_internal_loop(
 
 void doOut()
 {
-  find_internal_atoms();
-
   char *sel_buf = NULL;	/* buffer for selection data */
   size_t sel_len = 0;		/* length of sel_buf */
 
@@ -628,6 +626,8 @@ void doOut()
 
     sel_len = prop_len;
   } else {
+    find_internal_atoms();
+
     xcb_generic_event_t *event;
     unsigned int context = XCLIP_OUT_NONE;
     while (1) {
