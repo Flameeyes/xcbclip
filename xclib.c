@@ -432,75 +432,72 @@ static int handle_convert_selection(xcb_generic_event_t *event, char **txt, size
 }
 
 static bool handle_incr_request(xcb_generic_event_t *event, char **txt, size_t *len) {
-    /* To use the INCR method, we basically delete the
-     * property with the selection in it, wait for an
-     * event indicating that the property has been created,
-     * then read it, delete it, etc.
-     */
+  /* To use the INCR method, we basically delete the
+   * property with the selection in it, wait for an
+   * event indicating that the property has been created,
+   * then read it, delete it, etc.
+   */
     
-    /* make sure that the event is relevant */
-    if ((event->response_type & ~0x80) != XCB_PROPERTY_NOTIFY)
-      return false;
-    
-    xcb_property_notify_event_t *const prop_event = (xcb_property_notify_event_t *)event;
-    /* skip unless the property has a new value */
-    if (prop_event->state != XCB_PROPERTY_NEW_VALUE)
-      return false;
-	
-    xcb_get_property_cookie_t cookie = xcb_get_any_property(xconn, false,
-							    xwin, xclip_out_atom,
-							    0);
-    xcb_get_property_reply_t *reply = xcb_get_property_reply(xconn, cookie, 0);
-    
-    if ( reply->format != 8 ) {
-      /* property does not contain text, delete it
-       * to tell the other X client that we have read
-       * it and to send the next property
-       */
-      xcb_delete_property_checked(xconn, xwin, xclip_out_atom);
-      return false;
-    }
-
-    if (reply->bytes_after == 0) {
-      /* no more data, exit from loop */
-      xcb_delete_property_checked(xconn, xwin, xclip_out_atom);
-      
-      /* this means that an INCR transfer is now
-       * complete, return true
-       */
-      return true;
-    }
-
-    /* if we have come this far, the propery contains
-     * text, we know the size.
-     */
-    cookie = xcb_get_any_property(xconn, false,
-				  xwin, xclip_out_atom,
-				  reply->bytes_after);
-
-    /* allocate memory to accommodate data in *txt */
-    uint32_t reply_size = xcb_get_property_value_length(reply);
-    *len += reply_size;
-    char *ltxt = realloc(*txt, *len);
-    
-    if ( ltxt == NULL ) {
-      perrorf("%s: %s", progname, __FUNCTION__);
-      exit(EXIT_FAILURE);
-    }
-    
-    /* add data to ltxt */
-    memcpy(
-	   &ltxt[*len - reply_size],
-	   xcb_get_property_value(reply),
-	   reply_size
-	   );
-    
-    *txt = ltxt;
-    
-    /* delete property to get the next item */
-    xcb_delete_property_checked(xconn, xwin, xclip_out_atom);
-    xcb_flush(xconn);
+  /* make sure that the event is relevant */
+  if ((event->response_type & ~0x80) != XCB_PROPERTY_NOTIFY)
     return false;
+    
+  xcb_property_notify_event_t *const prop_event = (xcb_property_notify_event_t *)event;
+  /* skip unless the property has a new value */
+  if (prop_event->state != XCB_PROPERTY_NEW_VALUE)
+    return false;
+	
+  xcb_get_property_cookie_t cookie = xcb_get_any_property(xconn, false,
+							  xwin, xclip_out_atom,
+							  0);
+  xcb_get_property_reply_t *reply = xcb_get_property_reply(xconn, cookie, 0);
+    
+  if ( reply->format != 8 ) {
+    /* property does not contain text, delete it
+     * to tell the other X client that we have read
+     * it and to send the next property
+     */
+    xcb_delete_property_checked(xconn, xwin, xclip_out_atom);
+    return false;
+  }
+
+  if (reply->bytes_after == 0) {
+    /* no more data, exit from loop */
+    xcb_delete_property_checked(xconn, xwin, xclip_out_atom);
+      
+    /* this means that an INCR transfer is now
+     * complete, return true
+     */
+    return true;
+  }
+
+  /* if we have come this far, the propery contains
+   * text, we know the size.
+   */
+  cookie = xcb_get_any_property(xconn, false,
+				xwin, xclip_out_atom,
+				reply->bytes_after);
+
+  /* allocate memory to accommodate data in *txt */
+  uint32_t reply_size = xcb_get_property_value_length(reply);
+  *len += reply_size;
+  char *ltxt = realloc(*txt, *len);
+    
+  if ( ltxt == NULL ) {
+    perrorf("%s: %s", progname, __FUNCTION__);
+    exit(EXIT_FAILURE);
+  }
+    
+  /* add data to ltxt */
+  memcpy(&ltxt[*len - reply_size], xcb_get_property_value(reply),
+	 reply_size);
+    
+  *txt = ltxt;
+    
+  /* delete property to get the next item */
+  xcb_delete_property_checked(xconn, xwin, xclip_out_atom);
+  xcb_flush(xconn);
+  return false;
 }
 
 void do_out_string()
