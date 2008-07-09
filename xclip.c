@@ -23,14 +23,15 @@
 
 #include <config.h>
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <unistd.h>
 #include <ctype.h>
 #include <string.h>
+#include <getopt.h>
 
-#include <X11/Xresource.h>
 #include <xcb/xcb.h>
 #include <xcb/xcb_atom.h>
 #include "xcdef.h"
@@ -49,298 +50,102 @@ static int      fdiri = true;			/* direction is in */
 static int      ffilt = false;			/* filter mode */
 
 static xcb_connection_t	*xconn;				/* connection to X11 display */
-XrmDatabase     opt_db = NULL;			/* database for options */
 
-char          **fil_names;			/* names of files to read */
-int             fil_number = 0;                 /* number of files to read */
-int		fil_current = 0;
-FILE*           fil_handle = NULL;
+/** argv[0], the name the program is invoked with */
+const char *progname = NULL;
 
-/* variables to hold Xrm database record and type */
-XrmValue        rec_val;
-char           *rec_typ;
+/** the start of the non-option parameters */
+char **params = NULL;
+/** the number of non-option parameters */
+int params_count = 0;
 
 /* Use XrmParseCommand to parse command line options to option variable */
 static void doOptMain (int argc, char *argv[])
 {
-  /* command line option table for XrmParseCommand() */
-  XrmOptionDescRec opt_tab[] = {
-    /* loop option entry */
-    {
-      .option 	=	strdup("-loops"),
-      .specifier=	strdup(".loops"),
-      .argKind	=	XrmoptionSepArg,
-      .value	=	(XPointer) NULL
-    },
-
-    /* display option entry */
-    {
-      .option	=	strdup("-display"),
-      .specifier=	strdup(".display"),
-      .argKind	=	XrmoptionSepArg,
-      .value	=	(XPointer) NULL
-    },
-	
-    /* selection option entry */
-    {
-      .option 	=	strdup("-selection"),
-      .specifier=	strdup(".selection"),
-      .argKind	=	XrmoptionSepArg,
-      .value	=	(XPointer) NULL
-    },
-		
-    /* filter option entry */
-    {
-      .option	=	strdup("-filter"),
-      .specifier=	strdup(".filter"),
-      .argKind	=	XrmoptionNoArg,
-      .value	=	(XPointer) strdup(ST)
-    },
-		
-    /* in option entry */
-    {
-      .option	=	strdup("-in"),
-      .specifier=	strdup(".direction"),
-      .argKind	=	XrmoptionNoArg,
-      .value	=	(XPointer) strdup("I")
-    },
-		
-    /* out option entry */
-    {
-      .option	=	strdup("-out"),
-      .specifier=	strdup(".direction"),
-      .argKind	=	XrmoptionNoArg,
-      .value	=	(XPointer) strdup("O")
-    },
-		
-    /* version option entry */
-    {
-      .option	=	strdup("-version"),
-      .specifier=	strdup(".print"),
-      .argKind	=	XrmoptionNoArg,
-      .value	=	(XPointer) strdup("V")
-    },
-		
-    /* help option entry */
-    {
-      .option	=	strdup("-help"),
-      .specifier=	strdup(".print"),
-      .argKind	=	XrmoptionNoArg,
-      .value	=	(XPointer) strdup("H")
-    },
-		
-    /* silent option entry */
-    {
-      .option	=	strdup("-silent"),
-      .specifier=	strdup(".olevel"),
-      .argKind	=	XrmoptionNoArg,
-      .value	=	(XPointer) strdup("S")
-    },
-		
-    /* quiet option entry */
-    {
-      .option	=	strdup("-quiet"),
-      .specifier=	strdup(".olevel"),
-      .argKind	=	XrmoptionNoArg,
-      .value	=	(XPointer) strdup("Q")
-    },
-		
-    /* verbose option entry */
-    {
-      .option	=	strdup("-verbose"),
-      .specifier=	strdup(".olevel"),
-      .argKind	=	XrmoptionNoArg,
-      .value	=	(XPointer) strdup("V")
-    }
-
+  static const char optionsString[] = "l:d:s:fiovhSQV";
+  static const struct option optionsTable[] = {
+    { "loops",     required_argument, NULL,   'l'      },
+    { "display",   required_argument, NULL,   'd'      },
+    { "selection", required_argument, NULL,   's'      },
+    { "filter",    no_argument,       &ffilt, true     },
+    { "in",        no_argument,       &fdiri, true     },
+    { "out",       no_argument,       &fdiri, false    },
+    { "version",   no_argument,       NULL,   'v'      },
+    { "help",      no_argument,       NULL,   'h'      },
+    { "silent",    no_argument,       &fverb, OSILENT  },
+    { "quiet",     no_argument,       &fverb, OQUIET   },
+    { "verbose",   no_argument,       &fverb, OVERBOSE },
+    { NULL,        0,                 NULL,   '\0'     }
   };
 
-	/* Initialise resource manager and parse options into database */
-	XrmInitialize();
-	XrmParseCommand(
-		&opt_db,
-		opt_tab,
-		sizeof(opt_tab) / sizeof(opt_tab[0]),
-		PACKAGE_NAME,
-		&argc,
-		argv
-	);
-  
-	/* set output level */
-	if (
-		XrmGetResource(
-			opt_db,
-			PACKAGE_NAME ".olevel",
-			PACKAGE_NAME ".Olevel",
-			&rec_typ,
-			&rec_val
-		)
-	)
-	{
-		/* set verbose flag according to option */
-		if (strcmp(rec_val.addr, "S") == 0)
-			fverb = OSILENT;
-		if (strcmp(rec_val.addr, "Q") == 0)
-			fverb = OQUIET;
-		if (strcmp(rec_val.addr, "V") == 0)
-			fverb = OVERBOSE;
-	}
-  
-	/* set direction flag (in or out) */
-	if (
-		XrmGetResource(
-			opt_db,
-			PACKAGE_NAME ".direction",
-			PACKAGE_NAME ".Direction",
-			&rec_typ,
-			&rec_val
-		)
-	)
-	{
-		if (strcmp(rec_val.addr, "I") == 0)
-			fdiri = true;
-		if (strcmp(rec_val.addr, "O") == 0)
-			fdiri = false;
-	}
-  
-	/* set filter mode */
-	if (
-		XrmGetResource(
-			opt_db,
-			PACKAGE_NAME ".filter",
-			PACKAGE_NAME ".Filter",
-			&rec_typ,
-			&rec_val
-		)
-	)
-	{
-		/* filter mode only allowed in silent mode */
-		if (fverb == OSILENT)
-			ffilt = true;
-	}
-  
-	/* check for -help and -version */
-	if (
-		XrmGetResource(
-			opt_db,
-			PACKAGE_NAME ".print",
-			PACKAGE_NAME ".Print",
-			&rec_typ,
-			&rec_val
-		)
-	)
-	{
-		if (strcmp(rec_val.addr, "H") == 0)
-			prhelp(argv[0]);
-		if (strcmp(rec_val.addr, "V") == 0)
-			prversion();
-	}
-  
-	/* check for -display */
-	if (
-		XrmGetResource(
-			opt_db,
-			PACKAGE_NAME ".display",
-			PACKAGE_NAME ".Display",
-			&rec_typ,
-			&rec_val
-		)
-	)
-	{
-		sdisp = rec_val.addr;
-		if (fverb == OVERBOSE)	/* print in verbose mode only */
-			fprintf(stderr, "Display: %s\n", sdisp);
-	}
-  
-	/* check for -loops */
-	if (
-		XrmGetResource(
-			opt_db,
-			PACKAGE_NAME ".loops",
-			PACKAGE_NAME ".Loops",
-			&rec_typ,
-			&rec_val
-		)
-	)
-	{
-		sloop = atoi(rec_val.addr);
-		if (fverb == OVERBOSE)	/* print in verbose mode only */
-			fprintf(stderr, "Loops: %i\n", sloop);
-	}
+  int opt;
+  while ((opt = getopt_long(argc, argv, optionsString, optionsTable, NULL)) >= 0) {
+    switch (opt) {
+    case 'l':
+      assert(optarg != NULL);
+      sloop = atoi(optarg);
+      break;
+    case 'd':
+      assert(optarg != NULL);
+      sdisp = strdup(optarg);
+      break;
+    case 's':
+      assert(optarg != NULL);
+      if ( strncasecmp(optarg, "p", 1) == 0 ) {
+	sseln = PRIMARY;
+      } else if ( strncasecmp(optarg, "s", 1) == 0 ) {
+	sseln = SECONDARY;
+      } else if ( strncasecmp(optarg, "c", 1) == 0 ) {
+	fprintf(stderr, "%s: FIXME: clipboard not implemented\n", progname);
+	exit(EXIT_FAILURE);
+      } else if ( strncasecmp(optarg, "b", 1) == 0 ) {
+	sseln = STRING;
+      } else {
+	fprintf(stderr, "%s: unknown selection %s", progname, optarg);
+      }
+      break;
+    case 'h':
+      prhelp(progname);
+      exit(EXIT_SUCCESS);
+      break; // useless
+    case 'v':
+      prversion();
+      exit(EXIT_SUCCESS);
+      break; // useless
+    }
+  }
 
-	/* Read remaining options (filenames) */
-	while ( (fil_number + 1) < argc )
-	{
-		if (fil_number > 0)
-		{
-			fil_names = xcrealloc(
-				fil_names,
-				(fil_number + 1) * sizeof(char*)
-			);
-		} else
-		{
-			fil_names = xcmalloc(sizeof(char*));
-		}
-		fil_names[fil_number] = argv[fil_number + 1];
-		fil_number++;
-	}
+  if ( optind < argc ) {
+    params = &argv[optind];
+    params_count = argc - optind;
+  }
 }
 
-/* process selection command line option */
-static void doOptSel (void)
-{
-  sseln = PRIMARY;
+/**
+ * @brief Read a whole stream appending to the buffer
+ * @param stream Stream to read from
+ * @param buf Buffer to append the read data from
+ * @param len Length of the user buffer
+ * @param size Size allocated for the buffer
+ */
+static void read_all(FILE *stream, uint8_t **buf, size_t *len, size_t *size) {
+  while(!feof(stream)) {
+    assert(*len <= *size);
+    if ( *len >= *size ) {
+      /* double the allocated size of the buffer */
+      *size *= 2;
+      *buf = realloc(*buf, *size);
+      if ( *buf == NULL ) {
+	perrorf("%s: %s", progname, __FUNCTION__);
+	exit(EXIT_FAILURE);
+      }
+    }
 
-	/* set selection to work with */
-	if (
-		XrmGetResource(
-			opt_db,
-			PACKAGE_NAME ".selection",
-			PACKAGE_NAME ".Selection",
-			&rec_typ,
-			&rec_val
-		)
-	)
-	{
-		switch (tolower(rec_val.addr[0]))
-		{
-			case 'p':
-				sseln = PRIMARY;
-				break;
-			case 's':
-				sseln = SECONDARY;
-				break;
-			case 'c':
-			  // TODO! FIX THIS
-			  sseln = PRIMARY; // XA_CLIPBOARD(dpy);
-				break;
-			case 'b':
-				sseln = STRING;
-				break;
-		}
-    
-		if (fverb == OVERBOSE)
-		{
-			fprintf(stderr, "Using selection: ");
-	   
-			if (sseln == PRIMARY)
-				fprintf(stderr, "PRIMARY");
-			if (sseln == SECONDARY)
-				fprintf(stderr, "SECONDARY");
-#if 0
-			if (sseln == XA_CLIPBOARD(dpy))
-				fprintf(stderr, "CLIPBOARD");
-#endif
-
-			if (sseln == STRING)
-				fprintf(stderr, "STRING");
-
-			fprintf(stderr, "\n");
-		}
-	}
+    *len += fread(*buf + *len, sizeof(char), *size - *len, stream);
+  }
 }
 
-static void doIn(xcb_window_t win, const char *progname)
+static void doIn(xcb_window_t win)
 {
   size_t sel_len = 0;	/* length of sel_buf */
   size_t sel_all = 16;	/* allocated size of sel_buf */
@@ -350,55 +155,31 @@ static void doIn(xcb_window_t win, const char *progname)
   /* buffer for selection data */
   uint8_t *sel_buf = xcmalloc(sel_all * sizeof(char));
 
-  /* Put chars into inc from stdin or files until we hit EOF */
-  do {
-    if (fil_number == 0) {
-      /* read from stdin if no files specified */
-      fil_handle = stdin;
-    } else if (
-	       (fil_handle = fopen(
-				   fil_names[fil_current],
-				   "r"
-				   )) == NULL
-	       ) {
-      perrorf("%s: %s", progname, fil_names[fil_current]);
-      exit(EXIT_FAILURE);
-    } else {
-      /* file opened successfully. Print
-       * message (verbose mode only).
-       */
-      if (fverb == OVERBOSE)
-	fprintf(stderr, "Reading %s...\n", fil_names[fil_current]);
+  /* No files specified, use stdin */
+  if ( params_count == 0 ) {
+    read_all(stdin, &sel_buf, &sel_len, &sel_all);
+    
+    /* if there are no files being read from (i.e., input
+     * is from stdin not files, and we are in filter mode,
+     * spit all the input back out to stdout
+     */
+    if (ffilt) {
+      fwrite(sel_buf, sizeof(char), sel_len, stdout); 
+      fclose(stdout);
     }
-
-    fil_current++;
-    while (!feof(fil_handle)) {
-      /* If sel_buf is full (used elems =
-       * allocated elems)
-       */
-      if (sel_len == sel_all) {
-	/* double the number of
-	 * allocated elements
-	 */
-	sel_all *= 2;
-	sel_buf = xcrealloc(sel_buf, sel_all * sizeof(char));
+  } else {
+    for(int i = 0; i < params_count; i++) {
+      FILE *handler = fopen(params[i], "r");
+      if ( handler == NULL ) {
+	perrorf("%s: %s (%s)", progname, __FUNCTION__, params[i]);
+	exit(EXIT_FAILURE);
       }
-      sel_len += fread(
-		       sel_buf + sel_len,
-		       sizeof(char),
-		       sel_all - sel_len,
-		       fil_handle
-		       );
-    }
-  } while (fil_current < fil_number);
 
-  /* if there are no files being read from (i.e., input
-   * is from stdin not files, and we are in filter mode,
-   * spit all the input back out to stdout
-   */
-  if ((fil_number == 0) && ffilt) {
-    fwrite(sel_buf, sizeof(char), sel_len, stdout); 
-    fclose(stdout);
+      if ( fverb == OVERBOSE )
+	fprintf(stderr, "Reading %s...\n", params[i]);
+
+      read_all(stdin, &sel_buf, &sel_len, &sel_all);
+    }
   }
 
   /* Handle cut buffer if needed */
@@ -423,15 +204,14 @@ static void doIn(xcb_window_t win, const char *progname)
   /* fork into the background, exit parent process if we
    * are in silent mode
    */
-  if (fverb == OSILENT)
-    {
-      pid_t pid;
+  if (fverb == OSILENT) {
+    pid_t pid;
 
-      pid = fork();
-      /* exit the parent process; */
-      if (pid)
-	exit(EXIT_SUCCESS);
-    }
+    pid = fork();
+    /* exit the parent process; */
+    if (pid)
+      exit(EXIT_SUCCESS);
+  }
 
   /* print a message saying what we're waiting for */
   if (fverb > OSILENT) {
@@ -569,8 +349,25 @@ static void doOut(xcb_window_t win)
 
 int main (int argc, char *argv[])
 {
+  sseln = PRIMARY;
+
+  progname = argv[0];
   /* parse command line options */
   doOptMain(argc, argv);
+
+  if ( fverb == OVERBOSE ) {
+    fprintf(stderr, "Usign selection: ");
+    if ( sseln == PRIMARY )
+      fprintf(stderr, "PRIMARY\n");
+    else if ( sseln == SECONDARY )
+      fprintf(stderr, "SECONDARY\n");
+    // else if ( sseln == XA_CLIPBOARD(dpy) )
+    //   fprintf(stderr, "CLIPBOARD\n");
+    else if ( sseln == STRING )
+      fprintf(stderr, "STRING\n");
+    else
+      assert ( 1 == 0 );
+  }
   
   /* Connect to the X server. */
   if ( (xconn = xcb_connect(sdisp, NULL)) == NULL )
@@ -579,11 +376,8 @@ int main (int argc, char *argv[])
   else
     /* successful */
     if (fverb == OVERBOSE)
-      fprintf(stderr, "Connected to X server on %s.\n", sdisp);
+      fprintf(stderr, "%s: connected to X server on %s.\n", progname, sdisp);
     
-  /* parse selection command line option */
-  doOptSel();
-
   /* Get the first screen*/
   xcb_screen_t *screen = xcb_setup_roots_iterator(xcb_get_setup(xconn)).data;
 
@@ -605,7 +399,7 @@ int main (int argc, char *argv[])
   xcb_perror(xconn, cookie, "cannot create window");
 
   if (fdiri)
-    doIn(win, argv[0]);
+    doIn(win);
   else
     doOut(win);
 
