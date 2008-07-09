@@ -51,8 +51,11 @@ extern char **params;
 extern int params_count;
 
 /* xclib.c */
-void doIn();
-void doOut();
+void do_in_string(char *buf, size_t len);
+void do_out_string();
+
+void do_in(char *buf, size_t len);
+void do_out();
 
 /* print_errors.c */
 void perrorf(const char *format, ...)

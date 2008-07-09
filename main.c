@@ -178,6 +178,71 @@ static void doOptMain (int argc, char *argv[])
   }
 }
 
+/**
+ * @brief Read a whole stream appending to the buffer
+ * @param stream Stream to read from
+ * @param buf Buffer to append the read data from
+ * @param len Length of the user buffer
+ * @param size Size allocated for the buffer
+ */
+static void read_all(FILE *stream, char **buf, size_t *len, size_t *size) {
+  while(!feof(stream)) {
+    assert(*len <= *size);
+    if ( *len >= *size ) {
+      /* double the allocated size of the buffer */
+      *size *= 2;
+      *buf = realloc(*buf, *size);
+      if ( *buf == NULL ) {
+	perrorf("%s: %s", progname, __FUNCTION__);
+	exit(EXIT_FAILURE);
+      }
+    }
+
+    *len += fread(*buf + *len, sizeof(char), *size - *len, stream);
+  }
+}
+
+void get_input_buffer(char **out_buf, size_t *out_len)
+{
+  size_t len = 0;	/* length of sel_buf */
+  size_t size = 16;	/* allocated size of sel_buf */
+
+  char *buf = malloc(size);
+  if ( buf == NULL ) {
+    perrorf("%s: %s", progname, __FUNCTION__);
+    exit(EXIT_FAILURE);
+  }
+
+  /* No files specified, use stdin */
+  if ( params_count == 0 ) {
+    read_all(stdin, &buf, &len, &size);
+    
+    /* if there are no files being read from (i.e., input
+     * is from stdin not files, and we are in filter mode,
+     * spit all the input back out to stdout
+     */
+    if (ffilt) {
+      fwrite(buf, sizeof(char), len, stdout); 
+      fclose(stdout);
+    }
+  } else {
+    for(int i = 0; i < params_count; i++) {
+      FILE *handler = fopen(params[i], "r");
+      if ( handler == NULL ) {
+	perrorf("%s: %s (%s)", progname, __FUNCTION__, params[i]);
+	exit(EXIT_FAILURE);
+      }
+
+      if ( fverb == OVERBOSE )
+	fprintf(stderr, "Reading %s...\n", params[i]);
+
+      read_all(stdin, &buf, &len, &size);
+    }
+  }
+
+  *out_buf = buf; *out_len = len;
+}
+
 int main (int argc, char *argv[])
 {
   sseln = PRIMARY;
@@ -234,10 +299,22 @@ int main (int argc, char *argv[])
 
   xcb_perror(cookie, "cannot create window");
 
-  if (fdiri)
-    doIn();
-  else
-    doOut();
+  if (fdiri) {
+    /* input */
+    char *buffer = NULL;
+    size_t len = 0;
+
+    get_input_buffer(&buffer, &len);
+    if ( sseln == STRING )
+      do_in_string(buffer, len);
+    else
+      do_in(buffer, len);
+  } else {
+    if ( sseln == STRING )
+      do_out_string();
+    else
+      do_out();
+  }
 
   /* Disconnect from the X server */
   xcb_disconnect(xconn);

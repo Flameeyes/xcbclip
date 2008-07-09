@@ -100,7 +100,7 @@ static int doIn_internal_loop(
 	 xcb_window_t* win,
 	 xcb_generic_event_t* evt,
 	 xcb_atom_t* pty,
-	 uint8_t* txt,
+	 char* txt,
 	 size_t len,
 	 size_t* pos,
 	 uint32_t* context
@@ -255,83 +255,25 @@ static int doIn_internal_loop(
   return 0;
 }
 
-/**
- * @brief Read a whole stream appending to the buffer
- * @param stream Stream to read from
- * @param buf Buffer to append the read data from
- * @param len Length of the user buffer
- * @param size Size allocated for the buffer
- */
-static void read_all(FILE *stream, uint8_t **buf, size_t *len, size_t *size) {
-  while(!feof(stream)) {
-    assert(*len <= *size);
-    if ( *len >= *size ) {
-      /* double the allocated size of the buffer */
-      *size *= 2;
-      *buf = realloc(*buf, *size);
-      if ( *buf == NULL ) {
-	perrorf("%s: %s", progname, __FUNCTION__);
-	exit(EXIT_FAILURE);
-      }
-    }
-
-    *len += fread(*buf + *len, sizeof(char), *size - *len, stream);
-  }
+void do_in_string(char *buf, size_t len)
+{
+  xcb_void_cookie_t cookie = xcb_change_property_checked(xconn,
+							 XCB_PROP_MODE_REPLACE,
+							 xwin,
+							 CUT_BUFFER0,
+							 STRING,
+							 8,
+							 len, buf);
+  xcb_perror(cookie, "unable to set selection into string");
 }
 
-void doIn()
+void do_in(char *buf, size_t len)
 {
-  size_t sel_len = 0;	/* length of sel_buf */
-  size_t sel_all = 16;	/* allocated size of sel_buf */
   int dloop = 0;	/* done loops counter */
 
   /* in mode */
   /* buffer for selection data */
-  uint8_t *sel_buf = malloc(sel_all);
-  if ( sel_buf == NULL ) {
-    perrorf("%s: %s", progname, __FUNCTION__);
-    exit(EXIT_FAILURE);
-  }
 
-  /* No files specified, use stdin */
-  if ( params_count == 0 ) {
-    read_all(stdin, &sel_buf, &sel_len, &sel_all);
-    
-    /* if there are no files being read from (i.e., input
-     * is from stdin not files, and we are in filter mode,
-     * spit all the input back out to stdout
-     */
-    if (ffilt) {
-      fwrite(sel_buf, sizeof(char), sel_len, stdout); 
-      fclose(stdout);
-    }
-  } else {
-    for(int i = 0; i < params_count; i++) {
-      FILE *handler = fopen(params[i], "r");
-      if ( handler == NULL ) {
-	perrorf("%s: %s (%s)", progname, __FUNCTION__, params[i]);
-	exit(EXIT_FAILURE);
-      }
-
-      if ( fverb == OVERBOSE )
-	fprintf(stderr, "Reading %s...\n", params[i]);
-
-      read_all(stdin, &sel_buf, &sel_len, &sel_all);
-    }
-  }
-
-  /* Handle cut buffer if needed */
-  if (sseln == STRING) {
-    xcb_change_property_checked(xconn,
-			XCB_PROP_MODE_REPLACE,
-			xwin,
-			CUT_BUFFER0,
-			STRING,
-			8,
-			sel_len, sel_buf);
-    return;
-  }
-	
   /* take control of the selection so that we receive
    * SelectionRequest events from other windows
    */
@@ -421,8 +363,8 @@ void doIn()
 			   &cwin,
 			   event,
 			   &pty,
-			   sel_buf,
-			   sel_len,
+			   buf,
+			   len,
 			   &sel_pos,
 			   &context
 			   );
@@ -561,53 +503,57 @@ static bool handle_incr_request(xcb_generic_event_t *event, char **txt, size_t *
     return false;
 }
 
-void doOut()
+void do_out_string()
 {
-  char *sel_buf = NULL;	/* buffer for selection data */
-  size_t sel_len = 0;		/* length of sel_buf */
+  char *buf; uint8_t format; uint32_t prop_len;
+  int res = xcb_get_text_property(xconn, xwin, CUT_BUFFER0,
+				  &format, NULL, &prop_len, &buf);
+  
+  if ( res != 0 && format == 8 )
+    fwrite(buf, sizeof(char), prop_len, stdout);
 
-  if (sseln == STRING) {
-    uint8_t format; uint32_t prop_len;
-    int res = xcb_get_text_property(xconn, xwin, CUT_BUFFER0,
-				    &format, NULL, &prop_len, &sel_buf);
+#ifdef VALGRIND_CLEAN
+  free(buf);
+#endif
+}
 
-    if ( res == 0 || format != 8 ) {
-      free(sel_buf);
-      return;
-    }
+void do_out()
+{
+  char *buf = NULL;	/* buffer for selection data */
+  size_t len = 0;		/* length of sel_buf */
 
-    sel_len = prop_len;
-  } else {
-    find_internal_atoms();
-
-    send_selection_request();
-    
-    xcb_generic_event_t *event;
-    unsigned int context = XCLIP_OUT_SENTCONVSEL;
-    while ((event = xcb_wait_for_event(xconn))) {
-      switch(context) {
-      case XCLIP_OUT_SENTCONVSEL:
-	switch(handle_convert_selection(event, &sel_buf, &sel_len)) {
-	case -1:
-	  context = XCLIP_OUT_INCR;
-	case 0:
-	  continue;
-	case 1:
+  find_internal_atoms();
+  
+  send_selection_request();
+  
+  xcb_generic_event_t *event;
+  unsigned int context = XCLIP_OUT_SENTCONVSEL;
+  while ((event = xcb_wait_for_event(xconn))) {
+    switch(context) {
+    case XCLIP_OUT_SENTCONVSEL:
+      switch(handle_convert_selection(event, &buf, &len)) {
+      case -1:
+	context = XCLIP_OUT_INCR;
+      case 0:
+	continue;
+      case 1:
 	  goto done;
-	}
-	break;
-      case XCLIP_OUT_INCR:
-	if ( handle_incr_request(event, &sel_buf, &sel_len) )
-	  goto done;
-	break;
       }
+      break;
+    case XCLIP_OUT_INCR:
+	if ( handle_incr_request(event, &buf, &len) )
+	  goto done;
+	break;
     }
-    
-    /* if we reach here, event was NULL, and something bad happened */
-    assert(event != NULL);
   }
+  
+  /* if we reach here, event was NULL, and something bad happened */
+  assert(event != NULL);
 
  done:
-  fwrite(sel_buf, sizeof(char), sel_len, stdout);
-  free(sel_buf);
+  fwrite(buf, sizeof(char), len, stdout);
+
+#ifdef VALGRIND_CLEAN
+  free(buf);
+#endif
 }
