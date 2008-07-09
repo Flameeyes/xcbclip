@@ -35,7 +35,6 @@
 #include "xcb-contrib.h"
 
 typedef enum {
-  XCLIP_OUT_NONE,        /**< no context */
   XCLIP_OUT_SENTCONVSEL, /**< sent a request */
   XCLIP_OUT_INCR         /**< in an incr loop */
 } XClipOutContext;
@@ -103,7 +102,7 @@ static int doIn_internal_loop(
 	 char* txt,
 	 size_t len,
 	 size_t* pos,
-	 uint32_t* context
+	 XClipInContext* context
 )
 {
   unsigned long chunk_len;	/* length of current chunk (for incr
@@ -351,7 +350,7 @@ void do_in(char *buf, size_t len)
     find_internal_atoms();
 
     /* wait for a SelectionRequest event */
-    unsigned int context = XCLIP_IN_NONE;
+    XClipInContext context = XCLIP_IN_NONE;
     unsigned long sel_pos = 0;
     xcb_window_t cwin;
     xcb_atom_t pty;
@@ -524,7 +523,7 @@ void do_out()
   send_selection_request();
   
   xcb_generic_event_t *event;
-  unsigned int context = XCLIP_OUT_SENTCONVSEL;
+  XClipOutContext context = XCLIP_OUT_SENTCONVSEL;
   while ((event = xcb_wait_for_event(xconn))) {
     switch(context) {
     case XCLIP_OUT_SENTCONVSEL:
