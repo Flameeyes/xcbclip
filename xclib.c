@@ -281,7 +281,7 @@ static void read_all(FILE *stream, uint8_t **buf, size_t *len, size_t *size) {
   }
 }
 
-void doIn(xcb_window_t win)
+void doIn()
 {
   find_internal_atoms();
 
@@ -328,7 +328,7 @@ void doIn(xcb_window_t win)
   if (sseln == STRING) {
     xcb_change_property_checked(xconn,
 			XCB_PROP_MODE_REPLACE,
-			win,
+			xwin,
 			CUT_BUFFER0,
 			STRING,
 			8,
@@ -339,7 +339,7 @@ void doIn(xcb_window_t win)
   /* take control of the selection so that we receive
    * SelectionRequest events from other windows
    */
-  xcb_void_cookie_t cookie = xcb_set_selection_owner_checked(xconn, win, sseln, XCB_CURRENT_TIME);
+  xcb_void_cookie_t cookie = xcb_set_selection_owner_checked(xconn, xwin, sseln, XCB_CURRENT_TIME);
 
   xcb_perror(cookie, "cannot set selection owner");
 
@@ -611,7 +611,7 @@ static int doOut_internal_loop(
   return 0;
 }
 
-void doOut(xcb_window_t win)
+void doOut()
 {
   find_internal_atoms();
 
@@ -620,7 +620,7 @@ void doOut(xcb_window_t win)
 
   if (sseln == STRING) {
     uint8_t format; uint32_t prop_len;
-    int res = xcb_get_text_property(xconn, win, CUT_BUFFER0,
+    int res = xcb_get_text_property(xconn, xwin, CUT_BUFFER0,
 				    &format, NULL, &prop_len, &sel_buf);
 
     if ( res == 0 || format != 8 ) {
@@ -639,7 +639,7 @@ void doOut(xcb_window_t win)
 
       /* fetch the selection, or part of it */
       doOut_internal_loop(
-	    win,
+	    xwin,
 	    event,
 	    sseln,
 	    &sel_buf,

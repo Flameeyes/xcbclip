@@ -213,9 +213,9 @@ int main (int argc, char *argv[])
   xcb_perror(cookie, "cannot create window");
 
   if (fdiri)
-    doIn(xwin);
+    doIn();
   else
-    doOut(xwin);
+    doOut();
 
   /* Disconnect from the X server */
   xcb_disconnect(xconn);
