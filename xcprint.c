@@ -39,21 +39,21 @@ void prhelp (const char *name)
 		"Usage: %s [OPTION] [FILE]...\n"\
 		"Access an X server selection for reading or writing.\n"\
 		"\n"\
-		"  -i, -in          read text into X selection from standard input or files\n"\
+		"  -i, --in         read text into X selection from standard input or files\n"\
 		"                   (default)\n"\
-		"  -o, -out         prints the selection to standard out (generally for\n"\
+		"  -o, --out        prints the selection to standard out (generally for\n"\
 		"                   piping to a file or program)\n"\
-		"  -l, -loops       number of selection requests to "\
+		"  -l, --loops      number of selection requests to "\
 		"wait for before exiting\n"\
-		"  -d, -display     X display to connect to (eg "\
+		"  -d, --display    X display to connect to (eg "\
 		"localhost:0\")\n"\
-		"  -h, -help        usage information\n"\
-		"      -selection   selection to access (\"primary\", "\
-		"\"secondary\", \"clipboard\" or \"buffer-cut\")\n"\
-		"      -version     version information\n"\
-		"      -silent      errors only, run in background (default)\n"\
-		"      -quiet       run in foreground, show what's happening\n"\
-		"      -verbose     running commentary\n"\
+		"  -h, --help       usage information\n"\
+		"      --selection  selection to access (\"p(rimary)\", "\
+		"\"s(econdary)\", \"c(lipboard)\" or \"b(uffer-cut)\")\n"\
+		"  -v, --version    version information\n"\
+		"  -S, --silent     errors only, run in background (default)\n"\
+		"  -Q, --quiet      run in foreground, show what's happening\n"\
+		"  -V, --verbose    running commentary\n"\
 		"\n"\
 		"Report bugs to <flameeyes@gmail.com>\n",
 		name
