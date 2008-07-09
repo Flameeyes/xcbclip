@@ -23,9 +23,6 @@
 
 #include <xcb/xcb.h>
 
-/* functions in xcprint.c */
-extern void errxdisplay(const char *);
-
 void perrorf(const char *format, ...)
 #ifdef SUPPORT_ATTRIBUTE_FORMAT
   __attribute__((format(printf, 1, 2)))

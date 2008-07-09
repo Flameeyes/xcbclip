@@ -407,14 +407,19 @@ int main (int argc, char *argv[])
   }
   
   /* Connect to the X server. */
-  if ( (xconn = xcb_connect(sdisp, NULL)) == NULL )
+  if ( (xconn = xcb_connect(sdisp, NULL)) == NULL ) {
     /* couldn't connect to X server. Print error and exit */
-    errxdisplay(sdisp);
-  else
-    /* successful */
-    if (fverb == OVERBOSE)
-      fprintf(stderr, "%s: connected to X server on %s.\n", progname, sdisp);
+    if (sdisp == NULL)
+      sdisp = getenv("DISPLAY");
     
+    fprintf(stderr, "%s: can't open display: %s\n", progname, sdisp);
+    return EXIT_FAILURE;
+  }
+
+  /* successful */
+  if (fverb == OVERBOSE)
+    fprintf(stderr, "%s: connected to X server on %s.\n", progname, sdisp);
+  
   /* Get the first screen*/
   xcb_screen_t *screen = xcb_setup_roots_iterator(xcb_get_setup(xconn)).data;
 

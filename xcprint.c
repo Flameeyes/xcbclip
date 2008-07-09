@@ -31,19 +31,6 @@
 #include "xclib.h"
 #include "xcprint.h"
 
-/* failure to connect to X11 display */
-void errxdisplay (const char *display)
-{
-	/* if the display wasn't specified, read it from the enviroment
-	 * just like XOpenDisplay would
-	 */
-	if (display == NULL)
-		display = getenv("DISPLAY");
-	
-	fprintf(stderr, "Error: Can't open display: %s\n", display);
-	exit(EXIT_FAILURE);
-}
-
 /* a wrapper for perror that joins multiple prefixes together. Arguments
  * are an integer, and any number of strings. The integer needs to be set to
  * the number of strings that follow.
