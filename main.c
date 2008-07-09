@@ -43,11 +43,14 @@ char           *sdisp = NULL;			/* X display to connect to */
 xcb_atom_t      sseln;				/* X selection to work with */
 
 /* Flags for command line options */
-int      fverb = OSILENT;		/* output level */
-int      ffilt = false;			/* filter mode */
+
+/** Output verbosity level */
+XcbClipVerboseLevel fverb = OSILENT;
+/** Filter mode */
+bool ffilt = false;
 
 /** Direction (input if true, output if false) */
-static int fdiri = true;
+static bool fdiri = true;
 
 /** XCB connection to the display */
 xcb_connection_t *xconn;
@@ -100,18 +103,18 @@ static void doOptMain (int argc, char *argv[])
 
   static const char optionsString[] = "l:d:s:fiovhSQV";
   static const struct option optionsTable[] = {
-    { "loops",     required_argument, NULL,   'l'      },
-    { "display",   required_argument, NULL,   'd'      },
-    { "selection", required_argument, NULL,   's'      },
-    { "filter",    no_argument,       &ffilt, true     },
-    { "in",        no_argument,       &fdiri, true     },
-    { "out",       no_argument,       &fdiri, false    },
-    { "version",   no_argument,       NULL,   'v'      },
-    { "help",      no_argument,       NULL,   'h'      },
-    { "silent",    no_argument,       &fverb, OSILENT  },
-    { "quiet",     no_argument,       &fverb, OQUIET   },
-    { "verbose",   no_argument,       &fverb, OVERBOSE },
-    { NULL,        0,                 NULL,   '\0'     }
+    { "loops",     required_argument, NULL,   'l'  },
+    { "display",   required_argument, NULL,   'd'  },
+    { "selection", required_argument, NULL,   's'  },
+    { "filter",    no_argument,       NULL,   'f'  },
+    { "in",        no_argument,       NULL,   'i'  },
+    { "out",       no_argument,       NULL,   'o'  },
+    { "version",   no_argument,       NULL,   'v'  },
+    { "help",      no_argument,       NULL,   'h'  },
+    { "silent",    no_argument,       NULL,   'S'  },
+    { "quiet",     no_argument,       NULL,   'Q'  },
+    { "verbose",   no_argument,       NULL,   'V'  },
+    { NULL,        0,                 NULL,   '\0' }
   };
 
   int opt;
@@ -140,6 +143,15 @@ static void doOptMain (int argc, char *argv[])
 	fprintf(stderr, "%s: unknown selection %s", progname, optarg);
       }
       break;
+    case 'f':
+      ffilt = true;
+      break;
+    case 'i':
+      fdiri = true;
+      break;
+    case 'o':
+      fdiri = false;
+      break;
     case 'h':
       printf(usageOutput, progname);
       exit(EXIT_SUCCESS);
@@ -148,6 +160,15 @@ static void doOptMain (int argc, char *argv[])
       printf(versionOutput);
       exit(EXIT_SUCCESS);
       break; // useless
+    case 'S':
+      fverb = OSILENT;
+      break;
+    case 'Q':
+      fverb = OQUIET;
+      break;
+    case 'V':
+      fverb = OVERBOSE;
+      break;
     }
   }
 

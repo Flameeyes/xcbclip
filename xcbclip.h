@@ -21,6 +21,8 @@
  *  along with xcbclip.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdbool.h>
+
 #include <xcb/xcb.h>
 
 /* output level constants */
@@ -37,8 +39,8 @@ extern int sloop;
 extern char *sdisp;
 extern xcb_atom_t sseln;
 
-extern int fverb;
-extern int ffilt;
+extern XcbClipVerboseLevel fverb;
+extern bool ffilt;
 
 extern xcb_connection_t *xconn;
 extern xcb_window_t xwin;
