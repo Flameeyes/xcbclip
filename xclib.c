@@ -52,7 +52,7 @@ static xcb_atom_t incr_atom;
 static xcb_atom_t targets_atom;
 static xcb_atom_t xclip_out_atom;
 
-static void find_internal_atoms(xcb_connection_t* xconn) {
+static void find_internal_atoms() {
   static bool executed = false;
   if ( executed ) return;
 
@@ -98,7 +98,7 @@ static void find_internal_atoms(xcb_connection_t* xconn) {
  *
  * The context that event is the be processed within.
  */
-static int doIn_internal_loop(xcb_connection_t* xconn,
+static int doIn_internal_loop(
 	 xcb_window_t* win,
 	 xcb_generic_event_t* evt,
 	 xcb_atom_t* pty,
@@ -108,7 +108,7 @@ static int doIn_internal_loop(xcb_connection_t* xconn,
 	 uint32_t* context
 )
 {
-  find_internal_atoms(xconn);
+  find_internal_atoms();
 
   unsigned long chunk_len;	/* length of current chunk (for incr
 				 * transfers only)
@@ -163,7 +163,7 @@ static int doIn_internal_loop(xcb_connection_t* xconn,
 			  len, txt);
     }
 
-    xcb_perror(xconn, cookie, "cannot set data into property");
+    xcb_perror(cookie, "cannot set data into property");
 
     {
       /* response to event */
@@ -181,7 +181,7 @@ static int doIn_internal_loop(xcb_connection_t* xconn,
       cookie = xcb_send_event_checked(xconn, false, req_event->requestor, 0, (char*)&res);
     }
 
-    xcb_perror(xconn, cookie, "cannot set selection notify");
+    xcb_perror(cookie, "cannot set selection notify");
 
     /* if len < XC_CHUNK, then the data was sent all at
      * once and the transfer is now complete, return 1
@@ -341,7 +341,7 @@ void doIn(xcb_window_t win)
    */
   xcb_void_cookie_t cookie = xcb_set_selection_owner_checked(xconn, win, sseln, XCB_CURRENT_TIME);
 
-  xcb_perror(xconn, cookie, "cannot set selection owner");
+  xcb_perror(cookie, "cannot set selection owner");
 
   /* fork into the background, exit parent process if we
    * are in silent mode
@@ -420,7 +420,6 @@ void doIn(xcb_window_t win)
     bool clear = false;
     while ((event = xcb_wait_for_event(xconn))) {
       bool finished = doIn_internal_loop(
-			   xconn,
 			   &cwin,
 			   event,
 			   &pty,
@@ -464,7 +463,6 @@ void doIn(xcb_window_t win)
  * otherwise it's 0.
  */
 static int doOut_internal_loop(
-	xcb_connection_t* xconn,
 	xcb_window_t win,
 	xcb_generic_event_t* evt,
 	xcb_atom_t sel,
@@ -473,7 +471,7 @@ static int doOut_internal_loop(
 	uint32_t* context
 )
 {
-  find_internal_atoms(xconn);
+  find_internal_atoms();
 
   /* local buffer of text to return */
   char *ltxt = *txt;
@@ -492,7 +490,7 @@ static int doOut_internal_loop(
     cookie = xcb_convert_selection_checked(xconn, win, sel, STRING,
 					   xclip_out_atom, XCB_CURRENT_TIME);
 
-    xcb_perror(xconn, cookie, "cannot convert selection");
+    xcb_perror(cookie, "cannot convert selection");
 
     *context = XCLIP_OUT_SENTCONVSEL;
     return 0;
@@ -641,7 +639,6 @@ void doOut(xcb_window_t win)
 
       /* fetch the selection, or part of it */
       doOut_internal_loop(
-	    xconn,
 	    win,
 	    event,
 	    sseln,

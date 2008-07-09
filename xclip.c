@@ -207,7 +207,7 @@ int main (int argc, char *argv[])
 			    screen->root_visual,
 			    XCB_CW_EVENT_MASK, values);
 
-  xcb_perror(xconn, cookie, "cannot create window");
+  xcb_perror(cookie, "cannot create window");
 
   if (fdiri)
     doIn(win);

@@ -51,7 +51,7 @@ void perrorf(const char *format, ...)
 	free(prefix);
 }
 
-void xcb_perror(xcb_connection_t *xconn, xcb_void_cookie_t cookie, const char *errstr) {
+void xcb_perror(xcb_void_cookie_t cookie, const char *errstr) {
   xcb_generic_error_t *error = xcb_request_check(xconn, cookie);
   if ( error == NULL )
     return;
