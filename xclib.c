@@ -441,95 +441,55 @@ void doIn()
   }
 }
 
-/* Retrieves the contents of a selections. Arguments are:
- *
- * A display that has been opened.
- * 
- * A window
- * 
- * An event to process
- * 
- * The selection to return
- * 
- * A pointer to a char array to put the selection into.
- * 
- * A pointer to a long to record the length of the char array
- *
- * A pointer to an int to record the context in which to process the event
- *
- * Return value is 1 if the retrieval of the selection data is complete,
- * otherwise it's 0.
- */
-static int doOut_internal_loop(
-	xcb_generic_event_t* evt,
-	xcb_atom_t sel,
-	char** txt,
-	size_t* len,
-	uint32_t* context
-)
-{
-  xcb_void_cookie_t cookie;
-  switch (*context) {
-    /* there is no context, do an XConvertSelection() */
-  case XCLIP_OUT_NONE:
-    /* initialise return length to 0 */
-    if (*len > 0) {
-      free(*txt);
-      *len = 0;
-    }
+static void send_selection_request() {
+  /* send a selection request */
+  xcb_void_cookie_t cookie = xcb_convert_selection_checked(xconn, xwin, sseln,
+							   STRING, xclip_out_atom,
+							   XCB_CURRENT_TIME);
+  
+  xcb_perror(cookie, "cannot convert selection");
+}
 
-    /* send a selection request */
-    cookie = xcb_convert_selection_checked(xconn, xwin, sel, STRING,
-					   xclip_out_atom, XCB_CURRENT_TIME);
-
-    xcb_perror(cookie, "cannot convert selection");
-
-    *context = XCLIP_OUT_SENTCONVSEL;
+static int handle_convert_selection(xcb_generic_event_t *event, char **txt, size_t *len) {
+  if ((event->response_type & ~0x80) != XCB_SELECTION_NOTIFY)
     return 0;
-		
-  case XCLIP_OUT_SENTCONVSEL: {
-    if ((evt->response_type & ~0x80) != XCB_SELECTION_NOTIFY)
-      return 0;
-
-    xcb_get_property_cookie_t cookie = xcb_get_property(xconn, false, xwin,
-							xclip_out_atom, STRING, 0, 128);
-    xcb_get_property_reply_t *reply = xcb_get_property_reply(xconn, cookie, 0);
-
-    assert(reply != NULL);
-
-    if ( reply->type == incr_atom ) {
-      xcb_delete_property(xconn, xwin, xclip_out_atom);
-      xcb_flush(xconn);
-      *context = XCLIP_OUT_INCR;
-      return 0;
-    }
-    
-    assert(reply->format == 8);
-    
-    uint32_t reply_len = xcb_get_property_value_length(reply) * (reply->format / 8);
-    if(reply->bytes_after) {
-      cookie = xcb_get_property(xconn, 0, xwin, xclip_out_atom, reply->type, 0, reply_len);
-      free(reply);
-      reply = xcb_get_property_reply(xconn, cookie, 0);
-      assert(reply != NULL);
-    }
-    *txt = calloc(reply_len, 1);
-    assert(*txt != NULL);
-
-    memcpy(*txt, xcb_get_property_value(reply), reply_len);
-    *len = reply_len;
-    
-    /* finished with property, delete it */
-    free(reply);
-    xcb_delete_property_checked(xconn, xwin, xclip_out_atom);
-    
-    *context = XCLIP_OUT_NONE;
-
-    /* complete contents of selection fetched, return 1 */
-    return 1;
+  
+  xcb_get_property_cookie_t cookie = xcb_get_property(xconn, false, xwin,
+						      xclip_out_atom, STRING, 0, 128);
+  xcb_get_property_reply_t *reply = xcb_get_property_reply(xconn, cookie, 0);
+  
+  assert(reply != NULL);
+  
+  if ( reply->type == incr_atom ) {
+    xcb_delete_property(xconn, xwin, xclip_out_atom);
+    xcb_flush(xconn);
+    return -1;
   }
+  
+  assert(reply->format == 8);
+  
+  uint32_t reply_len = xcb_get_property_value_length(reply) * (reply->format / 8);
+  if(reply->bytes_after) {
+    cookie = xcb_get_property(xconn, 0, xwin, xclip_out_atom, reply->type, 0, reply_len);
+    free(reply);
+    reply = xcb_get_property_reply(xconn, cookie, 0);
+    assert(reply != NULL);
+  }
+  *txt = malloc(reply_len);
+  assert(*txt != NULL);
+  
+  memcpy(*txt, xcb_get_property_value(reply), reply_len);
+  *len = reply_len;
+  
+  /* finished with property, delete it */
+  free(reply);
+  xcb_delete_property_checked(xconn, xwin, xclip_out_atom);
+    
+  /* complete contents of selection fetched, return 1 */
+  return 1;
+}
 
-  case XCLIP_OUT_INCR: {
+static bool handle_incr_request(xcb_generic_event_t *event, char **txt, size_t *len) {
     /* To use the INCR method, we basically delete the
      * property with the selection in it, wait for an
      * event indicating that the property has been created,
@@ -537,13 +497,13 @@ static int doOut_internal_loop(
      */
     
     /* make sure that the event is relevant */
-    if ((evt->response_type & ~0x80) != XCB_PROPERTY_NOTIFY)
-      return 0;
+    if ((event->response_type & ~0x80) != XCB_PROPERTY_NOTIFY)
+      return false;
     
-    xcb_property_notify_event_t *const prop_event = (xcb_property_notify_event_t *)evt;
+    xcb_property_notify_event_t *const prop_event = (xcb_property_notify_event_t *)event;
     /* skip unless the property has a new value */
     if (prop_event->state != XCB_PROPERTY_NEW_VALUE)
-      return 0;
+      return false;
 	
     xcb_get_property_cookie_t cookie = xcb_get_any_property(xconn, false,
 							    xwin, xclip_out_atom,
@@ -556,18 +516,17 @@ static int doOut_internal_loop(
        * it and to send the next property
        */
       xcb_delete_property_checked(xconn, xwin, xclip_out_atom);
-      return 0;
+      return false;
     }
 
     if (reply->bytes_after == 0) {
       /* no more data, exit from loop */
       xcb_delete_property_checked(xconn, xwin, xclip_out_atom);
-      *context = XCLIP_OUT_NONE;
       
       /* this means that an INCR transfer is now
-       * complete, return 1
+       * complete, return true
        */
-      return 1;
+      return true;
     }
 
     /* if we have come this far, the propery contains
@@ -599,10 +558,7 @@ static int doOut_internal_loop(
     /* delete property to get the next item */
     xcb_delete_property_checked(xconn, xwin, xclip_out_atom);
     xcb_flush(xconn);
-    return 0;
-  }
-  }
-  return 0;
+    return false;
 }
 
 void doOut()
@@ -624,28 +580,34 @@ void doOut()
   } else {
     find_internal_atoms();
 
+    send_selection_request();
+    
     xcb_generic_event_t *event;
-    unsigned int context = XCLIP_OUT_NONE;
-    while (1) {
-      /* only get an event if the inner loop is doing something */
-      if (context != XCLIP_OUT_NONE)
-	event = xcb_wait_for_event(xconn);
-
-      /* fetch the selection, or part of it */
-      doOut_internal_loop(
-	    event,
-	    sseln,
-	    &sel_buf,
-	    &sel_len,
-	    &context
-	    );
-
-      /* only continue if the inner loop is doing something */
-      if (context == XCLIP_OUT_NONE)
+    unsigned int context = XCLIP_OUT_SENTCONVSEL;
+    while ((event = xcb_wait_for_event(xconn))) {
+      switch(context) {
+      case XCLIP_OUT_SENTCONVSEL:
+	switch(handle_convert_selection(event, &sel_buf, &sel_len)) {
+	case -1:
+	  context = XCLIP_OUT_INCR;
+	case 0:
+	  continue;
+	case 1:
+	  goto done;
+	}
 	break;
+      case XCLIP_OUT_INCR:
+	if ( handle_incr_request(event, &sel_buf, &sel_len) )
+	  goto done;
+	break;
+      }
     }
+    
+    /* if we reach here, event was NULL, and something bad happened */
+    assert(event != NULL);
   }
 
+ done:
   fwrite(sel_buf, sizeof(char), sel_len, stdout);
   free(sel_buf);
 }
