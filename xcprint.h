@@ -24,12 +24,12 @@
 #include <xcb/xcb.h>
 
 /* functions in xcprint.c */
-extern void prhelp(char *);
+extern void prhelp(const char *);
 extern void prversion(void);
 extern void errmalloc(void);
-extern void errxdisplay(char *);
+extern void errxdisplay(const char *);
 
-void perrorf(char *format, ...)
+void perrorf(const char *format, ...)
 #ifdef SUPPORT_ATTRIBUTE_FORMAT
   __attribute__((format(printf, 1, 2)))
 #endif

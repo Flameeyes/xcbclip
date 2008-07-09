@@ -32,7 +32,7 @@
 #include "xcprint.h"
 
 /* print the help screen. argument is argv[0] from main() */
-void prhelp (char *name)
+void prhelp (const char *name)
 {
 	fprintf(
 		stderr,
@@ -86,7 +86,7 @@ void errmalloc (void)
 }
 
 /* failure to connect to X11 display */
-void errxdisplay (char *display)
+void errxdisplay (const char *display)
 {
 	/* if the display wasn't specified, read it from the enviroment
 	 * just like XOpenDisplay would
@@ -102,7 +102,7 @@ void errxdisplay (char *display)
  * are an integer, and any number of strings. The integer needs to be set to
  * the number of strings that follow.
  */
-void perrorf(char *format, ...)
+void perrorf(const char *format, ...)
 {
 	/* start looping through the viariable arguments */
 	va_list ap;             /* argument pointer */
