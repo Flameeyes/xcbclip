@@ -27,7 +27,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include "xcdef.h"
 #include "xcbclip.h"
 #include "xcprint.h"
 

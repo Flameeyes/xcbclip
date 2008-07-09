@@ -31,7 +31,6 @@
 #include <xcb/xcb.h>
 #include <xcb/xcb_atom.h>
 #include <xcb/xcb_property.h>
-#include "xcdef.h"
 #include "xcprint.h"
 #include "xcbclip.h"
 #include "xcb-contrib.h"

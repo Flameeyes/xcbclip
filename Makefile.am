@@ -9,7 +9,6 @@ TESTS = xctest
 bin_PROGRAMS = xcbclip
 
 xcbclip_SOURCES = \
-	xcdef.h \
 	xclib.c \
 	xcbclip.h \
 	main.c \

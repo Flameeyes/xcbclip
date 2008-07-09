@@ -34,7 +34,6 @@
 
 #include <xcb/xcb.h>
 #include <xcb/xcb_atom.h>
-#include "xcdef.h"
 #include "xcprint.h"
 #include "xcbclip.h"
 

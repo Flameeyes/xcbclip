@@ -23,6 +23,16 @@
 
 #include <xcb/xcb.h>
 
+/* output level constants */
+typedef enum {
+  OSILENT,
+  OQUIET,
+  OVERBOSE
+} XcbClipVerboseLevel;
+
+/* maximume size to read/write to/from a property at once in bytes */
+#define XC_CHUNK 4096
+
 extern int sloop;
 extern char *sdisp;
 extern xcb_atom_t sseln;
