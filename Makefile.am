@@ -12,7 +12,7 @@ xcbclip_SOURCES = \
 	xcdef.h \
 	xclib.c \
 	xclib.h \
-	xclip.c \
+	main.c \
 	xcb-contrib.c \
 	xcb-contrib.h \
 	xcprint.c \
