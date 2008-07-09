@@ -186,7 +186,11 @@ static void doIn(xcb_window_t win)
 
   /* in mode */
   /* buffer for selection data */
-  uint8_t *sel_buf = xcmalloc(sel_all * sizeof(char));
+  uint8_t *sel_buf = malloc(sel_all);
+  if ( sel_buf == NULL ) {
+    perrorf("%s: %s", progname, __FUNCTION__);
+    exit(EXIT_FAILURE);
+  }
 
   /* No files specified, use stdin */
   if ( params_count == 0 ) {

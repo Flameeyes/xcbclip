@@ -31,13 +31,6 @@
 #include "xclib.h"
 #include "xcprint.h"
 
-/* failure message for malloc() problems */
-void errmalloc (void)
-{
-	fprintf(stderr, "Error: Could not allocate memory.\n");
-	exit(EXIT_FAILURE);
-}
-
 /* failure to connect to X11 display */
 void errxdisplay (const char *display)
 {

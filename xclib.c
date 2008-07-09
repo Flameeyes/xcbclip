@@ -33,35 +33,6 @@
 #include "xcprint.h"
 #include "xclib.h"
 
-/* check a pointer to allocater memory, print an error if it's null */
-static void xcmemcheck(void *ptr)
-{
-	if (ptr == NULL)
-		errmalloc();
-}
-
-/* wrapper for malloc that checks for errors */
-void *xcmalloc (size_t size)
-{
-	void *mem;
-	
-	mem = malloc(size);
-	xcmemcheck(mem);
-	
-	return(mem);
-}
-
-/* wrapper for realloc that checks for errors */
-void *xcrealloc (void *ptr, size_t size)
-{
-	void *mem;
-
-	mem = realloc(ptr, size);
-	xcmemcheck(mem);
-
-	return(mem);
-}
-
 static xcb_atom_t incr_atom;
 static xcb_atom_t targets_atom;
 static xcb_atom_t xclip_out_atom;
@@ -234,7 +205,12 @@ int xcout(
     /* allocate memory to accommodate data in *txt */
     uint32_t reply_size = xcb_get_property_value_length(reply);
     *len += reply_size;
-    ltxt = xcrealloc(ltxt, *len);
+    ltxt = realloc(ltxt, *len);
+    
+    if ( ltxt == NULL ) {
+      perrorf("%s: %s", progname, __FUNCTION__);
+      exit(EXIT_FAILURE);
+    }
     
     /* add data to ltxt */
     memcpy(

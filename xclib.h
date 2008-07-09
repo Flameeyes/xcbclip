@@ -33,6 +33,8 @@
 #define XCLIB_XCIN_SELREQ	1
 #define XCLIB_XCIN_INCR		2
 
+extern const char *progname;
+
 /* functions in xclib.c */
 extern int xcout(
 	xcb_connection_t*,
@@ -53,5 +55,3 @@ extern int xcin(
 	size_t*,
 	uint32_t*
 );
-extern void *xcmalloc(size_t);
-extern void *xcrealloc(void*, size_t);
