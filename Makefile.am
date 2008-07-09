@@ -14,7 +14,7 @@ xcbclip_SOURCES = \
 	main.c \
 	xcb-contrib.c \
 	xcb-contrib.h \
-	xcprint.c
+	print_errors.c
 
 xcbclip_CFLAGS = $(VISIBILITY_FLAG) $(XCB_CFLAGS)
 xcbclip_LDADD = $(XCB_LIBS)

@@ -52,7 +52,7 @@ extern int params_count;
 void doIn();
 void doOut();
 
-/* xcprint.c */
+/* print_errors.c */
 void perrorf(const char *format, ...)
 #ifdef SUPPORT_ATTRIBUTE_FORMAT
   __attribute__((format(printf, 1, 2)))
