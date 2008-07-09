@@ -351,10 +351,10 @@ void do_in(char *buf, size_t len)
     find_internal_atoms();
 
     /* wait for a SelectionRequest event */
-    static unsigned int context = XCLIP_IN_NONE;
-    static unsigned long sel_pos = 0;
-    static xcb_window_t cwin;
-    static xcb_atom_t pty;
+    unsigned int context = XCLIP_IN_NONE;
+    unsigned long sel_pos = 0;
+    xcb_window_t cwin;
+    xcb_atom_t pty;
 
     xcb_generic_event_t *event;
     bool clear = false;
