@@ -62,6 +62,39 @@ int params_count = 0;
 /* Use XrmParseCommand to parse command line options to option variable */
 static void doOptMain (int argc, char *argv[])
 {
+  static const char usageOutput[] =
+    "Usage: %s [OPTION] [FILE]...\n"
+    "Access an X server selection for reading or writing.\n"
+    "\n"
+    "  -i, --in         read text into X selection from standard input or"
+                       "files\n"
+    "                   (default)\n"
+    "  -o, --out        prints the selection to standard out (generally for\n"
+    "                   piping to a file or program)\n"
+    "  -l, --loops      number of selection requests to "
+                       "wait for before exiting\n"
+    "  -d, --display    X display to connect to (eg "
+                       "localhost:0\")\n"
+    "  -h, --help       usage information\n"
+    "      --selection  selection to access (\"p(rimary)\", "
+                       "\"s(econdary)\", \"c(lipboard)\" or "
+                       "\"b(uffer-cut)\")\n"
+    "  -v, --version    version information\n"
+    "  -S, --silent     errors only, run in background (default)\n"
+    "  -Q, --quiet      run in foreground, show what's happening\n"
+    "  -V, --verbose    running commentary\n"
+    "\n"
+    "Report bugs to Diego 'Flameeyes' Pettenò <flameeyes@gmail.com>\n";
+
+  static const char versionOutput[] =
+    PACKAGE_STRING " - command line interface to X selections" "\n"
+    "Copyright (c) 2001 Kim Saunders" "\n"
+    "Copyright (c) 2008 Diego 'Flameeyes' Pettenò" "\n"
+    "\n"
+    "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>" "\n"
+    "This is free software: you are free to change and redistribute it." "\n"
+    "There is NO WARRANTY, to the extent permitted by law." "\n";
+
   static const char optionsString[] = "l:d:s:fiovhSQV";
   static const struct option optionsTable[] = {
     { "loops",     required_argument, NULL,   'l'      },
@@ -105,11 +138,11 @@ static void doOptMain (int argc, char *argv[])
       }
       break;
     case 'h':
-      prhelp(progname);
+      printf(usageOutput, progname);
       exit(EXIT_SUCCESS);
       break; // useless
     case 'v':
-      prversion();
+      printf(versionOutput);
       exit(EXIT_SUCCESS);
       break; // useless
     }

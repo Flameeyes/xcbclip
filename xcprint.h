@@ -24,8 +24,6 @@
 #include <xcb/xcb.h>
 
 /* functions in xcprint.c */
-extern void prhelp(const char *);
-extern void prversion(void);
 extern void errmalloc(void);
 extern void errxdisplay(const char *);
 
