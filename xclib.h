@@ -31,7 +31,8 @@ extern int fverb;
 extern int fdiri;
 extern int ffilt;
 
-extern xcb_connection_t *xconn;				/* connection to X11 display */
+extern xcb_connection_t *xconn;
+extern xcb_window_t xwin;
 
 extern const char *progname;
 

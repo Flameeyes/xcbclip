@@ -48,7 +48,10 @@ int      fverb = OSILENT;		/* output level */
 int      fdiri = true;			/* direction is in */
 int      ffilt = false;			/* filter mode */
 
-xcb_connection_t	*xconn;				/* connection to X11 display */
+/** XCB connection to the display */
+xcb_connection_t *xconn;
+/** xcbclip window ID */
+xcb_window_t xwin;
 
 /** argv[0], the name the program is invoked with */
 const char *progname = NULL;
@@ -193,14 +196,14 @@ int main (int argc, char *argv[])
   xcb_screen_t *screen = xcb_setup_roots_iterator(xcb_get_setup(xconn)).data;
 
   /* Ask for a new window ID */
-  xcb_window_t win = xcb_generate_id(xconn);
+  xwin = xcb_generate_id(xconn);
 
   static const uint32_t values[] = { XCB_EVENT_MASK_PROPERTY_CHANGE };
 
   /* Create a window to trap events */
   xcb_void_cookie_t cookie = xcb_create_window(xconn,
 			    XCB_COPY_FROM_PARENT,
-			    win,
+			    xwin,
 			    screen->root,
 			    0, 0, 1, 1,
 			    0, XCB_WINDOW_CLASS_INPUT_OUTPUT,
@@ -210,9 +213,9 @@ int main (int argc, char *argv[])
   xcb_perror(cookie, "cannot create window");
 
   if (fdiri)
-    doIn(win);
+    doIn(xwin);
   else
-    doOut(win);
+    doOut(xwin);
 
   /* Disconnect from the X server */
   xcb_disconnect(xconn);
