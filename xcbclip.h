@@ -48,6 +48,15 @@ extern const char *progname;
 extern char **params;
 extern int params_count;
 
+/* xclib.c */
 void doIn();
 void doOut();
 
+/* xcprint.c */
+void perrorf(const char *format, ...)
+#ifdef SUPPORT_ATTRIBUTE_FORMAT
+  __attribute__((format(printf, 1, 2)))
+#endif
+  ;
+
+void xcb_perror(xcb_void_cookie_t cookie, const char *errstr);

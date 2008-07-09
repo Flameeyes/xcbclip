@@ -34,7 +34,7 @@
 
 #include <xcb/xcb.h>
 #include <xcb/xcb_atom.h>
-#include "xcprint.h"
+
 #include "xcbclip.h"
 
 /* Options that get set on the command line */

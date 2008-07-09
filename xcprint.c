@@ -28,7 +28,6 @@
 #include <stdarg.h>
 #include <string.h>
 #include "xcbclip.h"
-#include "xcprint.h"
 
 /* a wrapper for perror that joins multiple prefixes together. Arguments
  * are an integer, and any number of strings. The integer needs to be set to
