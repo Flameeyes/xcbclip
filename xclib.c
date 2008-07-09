@@ -108,8 +108,6 @@ static int doIn_internal_loop(
 	 uint32_t* context
 )
 {
-  find_internal_atoms();
-
   unsigned long chunk_len;	/* length of current chunk (for incr
 				 * transfers only)
 				 */
@@ -285,6 +283,8 @@ static void read_all(FILE *stream, uint8_t **buf, size_t *len, size_t *size) {
 
 void doIn(xcb_window_t win)
 {
+  find_internal_atoms();
+
   size_t sel_len = 0;	/* length of sel_buf */
   size_t sel_all = 16;	/* allocated size of sel_buf */
   int dloop = 0;	/* done loops counter */
@@ -471,8 +471,6 @@ static int doOut_internal_loop(
 	uint32_t* context
 )
 {
-  find_internal_atoms();
-
   /* local buffer of text to return */
   char *ltxt = *txt;
 
@@ -615,6 +613,8 @@ static int doOut_internal_loop(
 
 void doOut(xcb_window_t win)
 {
+  find_internal_atoms();
+
   char *sel_buf = NULL;	/* buffer for selection data */
   size_t sel_len = 0;		/* length of sel_buf */
 
