@@ -28,7 +28,6 @@ extern char *sdisp;
 extern xcb_atom_t sseln;
 
 extern int fverb;
-extern int fdiri;
 extern int ffilt;
 
 extern xcb_connection_t *xconn;

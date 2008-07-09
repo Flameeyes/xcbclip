@@ -45,8 +45,10 @@ xcb_atom_t      sseln;				/* X selection to work with */
 
 /* Flags for command line options */
 int      fverb = OSILENT;		/* output level */
-int      fdiri = true;			/* direction is in */
 int      ffilt = false;			/* filter mode */
+
+/** Direction (input if true, output if false) */
+static int fdiri = true;
 
 /** XCB connection to the display */
 xcb_connection_t *xconn;
