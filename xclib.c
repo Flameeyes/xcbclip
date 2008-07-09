@@ -468,9 +468,6 @@ static int doOut_internal_loop(
 	uint32_t* context
 )
 {
-  /* local buffer of text to return */
-  char *ltxt = *txt;
-
   xcb_void_cookie_t cookie;
   switch (*context) {
     /* there is no context, do an XConvertSelection() */
@@ -583,7 +580,7 @@ static int doOut_internal_loop(
     /* allocate memory to accommodate data in *txt */
     uint32_t reply_size = xcb_get_property_value_length(reply);
     *len += reply_size;
-    ltxt = realloc(ltxt, *len);
+    char *ltxt = realloc(*txt, *len);
     
     if ( ltxt == NULL ) {
       perrorf("%s: %s", progname, __FUNCTION__);
